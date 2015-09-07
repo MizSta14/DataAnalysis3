@@ -1,12 +1,57 @@
----
-title: "STAT 8330 FALL 2015 ASSIGNMENT 1"
-author: "Peng Shao"
-date: "September 6, 2015"
-output: 
-    pdf_document:
-        includes:
-            in_header: mystyles.sty
----
+\documentclass[letterpaper, 10pt]{article}
+
+
+\usepackage{parskip,xspace}
+\usepackage{amsmath,amsthm,amsfonts,amssymb} 
+\usepackage{caption}
+\usepackage{xcolor} 
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{ltxtable}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{bm}
+
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+
+
+\newcommand{\ba}{$$\begin{aligned}}
+\newcommand{\ea}{\end{aligned}$$}
+\newcommand{\dd}{\mathrm{d}}
+\allowdisplaybreaks
+
+
+
+
+
+\pagestyle{fancy}
+\lhead{Peng Shao 14221765}
+\chead{}
+\rhead{\bfseries STAT 8640 Fall 2015 Assignment 1}
+\renewcommand{\headrulewidth}{0.4 pt}
+\setlength{\parindent}{2em}
+
+\begin{document}
+\title{STAT 8640 Fall 2015 Assignment 1}
+\author{Peng Shao 14221765}
+\maketitle
+\indent
+
+<<knitr_options, include=FALSE>>=
+opts_chunk$set(fig.width=4, fig.height=4, fig.path='RnwFigs/',
+               warning=FALSE, message=FALSE, tidy=TRUE)
+options(width=60)
+set.seed(53079239)
+# install R/qtl package if necessary:
+if(!require("qtl")) install.packages("qtl", repos="http://cran.us.r-project.org")
+@
+
+
+
+
 
 $\blacktriangleright$ \textbf{Exercises 2.5.\quad Solution.} 
 
@@ -61,44 +106,76 @@ $\blacktriangleright$ \textbf{Exercises 4.3.\quad Solution.}
 $\blacktriangleright$ \textbf{Exercises 4.10.\quad Solution.} 
 
 We know that we classify $X$ into $k$th class based on Bayes' classifier if
-$$
+\ba
 {p_k (x)}=\frac{f_k(x)\pi_k}{\sum_{l=1}^{K}f_l(x)\pi_l}
-$$
+\ea
 is largest among all $p_l(x),\, l=1,2,...,K$. For 1 dimension, the density of $x$ from $k$th class is 
 $$
 {f_k(x)}={\frac{1}{\sqrt{2\pi}\sigma_k}}e^{-\frac{(x-\mu_k)^2}{2\sigma_k^2}} 
 $$
 In comparing two classes $k$ and $l$, it is sufficient to look at the log-ratio, and we see that
-$$
-\begin{aligned}
-\log\left(\frac{p_k(x)}{p_l(x)}\right) & = \log\left(\frac{\pi_k}{\pi_l}\right) + \log\left(\frac{f_k(x)}{f_l(x)}\right)\\
-& = \log\left(\frac{\pi_k}{\pi_l}\right) + \log\left(\frac{\sigma_l}{\sigma_k}\right) - \frac{(x-\mu_k)^2}{2\sigma_k^2} + \frac{(x-\mu_l)^2}{2\sigma_l^2}\\
-& = \left(-\frac{(x-\mu_k)^2}{2\sigma_k^2}-\log\sigma_k+\log\pi_k\right) - \left(-\frac{(x-\mu_l)^2}{2\sigma_l^2}-\log\sigma_l+\log\pi_l\right)\\
-& = \delta_k(x) - \delta_l(x)
-\end{aligned}
-$$
-Then the Beyes' classifier can be be defined as 
-$$
-C(x)=\argmax_k\delta_k(x)
-$$
-
-
-$\blacktriangleright$ \textbf{Exercises 4.13.\quad Solution.} 
+\ba
+\log\left(\frac{p_k(x)}{p_l(x)}\right)&=\log\left(\frac{\pi_k}{\pi_l}\right)
+	\ea
 
 
 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r}
-summary(cars)
-```
+	$\blacktriangleright$ \textbf{Exercises 4.13.\quad Solution.} 
 
-You can also embed plots, for example:
 
-```{r, echo=FALSE}
-plot(cars)
-```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-s
+
+	When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+	```{r}
+	summary(cars)
+	```
+
+	You can also embed plots, for example:
+
+	```{r, echo=FALSE}
+	plot(cars)
+	```
+
+	Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s

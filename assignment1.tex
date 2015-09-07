@@ -1,0 +1,223 @@
+\documentclass[letterpaper, 10pt]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+
+
+\usepackage{parskip,xspace}
+\usepackage{amsmath,amsthm,amsfonts,amssymb} 
+\usepackage{caption}
+\usepackage{xcolor} 
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{ltxtable}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{bm}
+
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+
+
+\newcommand{\ba}{$$\begin{aligned}}
+\newcommand{\ea}{\end{aligned}$$}
+\newcommand{\dd}{\mathrm{d}}
+\allowdisplaybreaks
+
+
+
+
+
+\pagestyle{fancy}
+\lhead{Peng Shao 14221765}
+\chead{}
+\rhead{\bfseries STAT 8640 Fall 2015 Assignment 1}
+\renewcommand{\headrulewidth}{0.4 pt}
+\setlength{\parindent}{2em}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+\title{STAT 8640 Fall 2015 Assignment 1}
+\author{Peng Shao 14221765}
+\maketitle
+\indent
+
+
+
+
+
+
+
+$\blacktriangleright$ \textbf{Exercises 2.5.\quad Solution.} 
+
+(1). \begin{itemize}
+\item advantage: can fit many different functional forms; low bias; usually predict more accurately
+\item disadvantage: overfitting problem; sually hard to interpret; high variance
+\end{itemize}
+
+(2). If our goal is to predict more accurately, it will usually be best to choose a more flexible approach.
+
+(3). If our goal is to make some inferences, we prefer choosing a less flexible approach because the relation between response and predictor is more explicit.
+
+$\blacktriangleright$ \textbf{Exercises 2.6.\quad Solution.} 
+
+(1). The essential difference between parametric and non-parametric approach is that, the parametric make an assumption of the form of $f$, which can reduce problem of estimating $f$ down to one of estimating a set of parameter, but non-parametric do not make explicit assumptions about the functional form of $f$.
+
+
+(2). \begin{itemize}
+\item advantage: it is easier to estimate parameter; the relation between response and predictor is more explicit; 
+\item disadvantage: the model we choose will usually not match the true unknown form of $f$; sometimes need more assumption.
+\end{itemize}
+
+
+
+
+
+
+$\blacktriangleright$ \textbf{Exercises 2.10.\quad Solution.} 
+
+
+
+$\blacktriangleright$ \textbf{Exercises 3.5.\quad Solution.} 
+
+
+
+
+
+
+$\blacktriangleright$ \textbf{Exercises 3.15.\quad Solution.}
+
+
+
+
+
+
+$\blacktriangleright$ \textbf{Exercises 4.3.\quad Solution.}
+
+
+
+
+
+$\blacktriangleright$ \textbf{Exercises 4.10.\quad Solution.} 
+
+We know that we classify $X$ into $k$th class based on Bayes' classifier if
+\ba
+{p_k (x)}=\frac{f_k(x)\pi_k}{\sum_{l=1}^{K}f_l(x)\pi_l}
+\ea
+is largest among all $p_l(x),\, l=1,2,...,K$. For 1 dimension, the density of $x$ from $k$th class is 
+$$
+{f_k(x)}={\frac{1}{\sqrt{2\pi}\sigma_k}}e^{-\frac{(x-\mu_k)^2}{2\sigma_k^2}} 
+$$
+In comparing two classes $k$ and $l$, it is sufficient to look at the log-ratio, and we see that
+\ba
+\log\left(\frac{p_k(x)}{p_l(x)}\right)&=\log\left(\frac{\pi_k}{\pi_l}\right)
+	\ea
+
+
+
+
+
+	$\blacktriangleright$ \textbf{Exercises 4.13.\quad Solution.} 
+
+
+
+
+	When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+	```{r}
+	summary(cars)
+	```
+
+	You can also embed plots, for example:
+
+	```{r, echo=FALSE}
+	plot(cars)
+	```
+
+	Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
+
+	s
