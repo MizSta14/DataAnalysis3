@@ -1,0 +1,94 @@
+---
+title: "STAT 8330 FALL 2015 ASSIGNMENT 1"
+author: "Peng Shao"
+date: "September 6, 2015"
+output: 
+    pdf_document:
+        includes:
+            in_header: mystyles.sty
+---
+
+$\blacktriangleright$ \textbf{Exercises 2.5.\quad Solution.} 
+
+(1). \begin{itemize}
+\item advantage: can fit many different functional forms; low bias; usually predict more accurately
+\item disadvantage: overfitting problem; sually hard to interpret; high variance
+\end{itemize}
+
+(2). If our goal is to predict more accurately, it will usually be best to choose a more flexible approach.
+
+(3). If our goal is to make some inferences, we prefer choosing a less flexible approach because the relation between response and predictor is more explicit.
+
+$\blacktriangleright$ \textbf{Exercises 2.6.\quad Solution.} 
+
+(1). The essential difference between parametric and non-parametric approach is that, the parametric make an assumption of the form of $f$, which can reduce problem of estimating $f$ down to one of estimating a set of parameter, but non-parametric do not make explicit assumptions about the functional form of $f$.
+
+
+(2). \begin{itemize}
+\item advantage: it is easier to estimate parameter; the relation between response and predictor is more explicit; 
+\item disadvantage: the model we choose will usually not match the true unknown form of $f$; sometimes need more assumption.
+\end{itemize}
+
+
+
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+\ba
+ss
+\ea
+
+
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+summary(cars)
+```
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
+s
+
