@@ -7,6 +7,9 @@ output:
         includes:
             in_header: mystyles.sty
 ---
+```{r, echo = FALSE}
+par(mar = c(3, 3, 3, 3))
+```
 
 $\blacktriangleright$ \textbf{Exercises 2.5.\quad Solution.} 
 
@@ -55,11 +58,6 @@ $\blacktriangleright$ \textbf{Exercises 3.15.\quad Solution.}
 $\blacktriangleright$ \textbf{Exercises 4.3.\quad Solution.}
 
 
-
-
-
-$\blacktriangleright$ \textbf{Exercises 4.10.\quad Solution.} 
-
 We know that we classify $X$ into $k$th class based on Bayes' classifier if
 $$
 {p_k (x)}=\frac{f_k(x)\pi_k}{\sum_{l=1}^{K}f_l(x)\pi_l}
@@ -81,6 +79,64 @@ Then the Beyes' classifier can be be defined as
 $$
 C(x)=\argmax_k\delta_k(x)
 $$
+where $\delta_k(x) = -\frac{(x-\mu_k)^2}{2\sigma_k^2}-\log\sigma_k+\log\pi_k$.
+
+It is obvious that the decision boundary between each pair of classes k and l is described by a quadratic equation $\{x : \delta_k(x) = \delta_l(x)\}$. 
+
+
+
+
+
+
+$\blacktriangleright$ \textbf{Exercises 4.10.\quad Solution.} 
+
+
+
+(a). From the output, we can see that (1) the variable Volume is increased as the Year increased, and the increase rates become larger and larger; (2) the variable Today is highly, but not complete, correlated with the indicator variable Direction, so we may guess that Direction is transformed from Today. Except this two pairs, no other pairs show any obvious patterns.
+```{r, echo=FALSE}
+rm(list = ls())
+library(ISLR)
+library(ggplot2)
+attach(Weekly)
+```
+
+```{r}
+cor(Weekly[, -9])
+pairs(Weekly, col = Direction)
+```
+
+(b). Fitting the model as below, the summary result shows that only intercept and coefficient of Lag2 is significant.
+```{r}
+logit.fit <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume,
+                family = binomial, data = Weekly)
+summary(logit.fit)
+```
+
+(c). Using threshold = 0.5, 
+```{r, echo = FALSE}
+ConfusionTable <- function(ct){
+    accuracy <- (ct[1, 1] + ct[2, 2]) / (sum(ct))
+    TPr <- ct[2, 2] / (ct[1, 2] + ct[2, 2])
+    FPr <- ct[2, 1] / (ct[1, 1] + ct[2, 1])
+    precision <- ct[2, 2] / (ct[2, 1] + ct[2, 2])
+    error <- 1 - accuracy
+    result <- list(accuracy, TPr, FPr, precision, error)
+    names(result) <- c("Accuracy", "True Positive Rate", 
+                       "False Posistive Rate", "Precision", 
+                       "Total Error Rate")
+    return(result)
+}
+```
+
+```{r}
+glm.probs <- predict(logit.fit,type="response")
+glm.pred <- rep("Down",nrow(Weekly))
+glm.pred[glm.probs > 0.50]="Up"
+ct <- table(glm.pred, Direction)
+ct
+ConfusionTable(ct)
+```
+
 
 
 $\blacktriangleright$ \textbf{Exercises 4.13.\quad Solution.} 
@@ -88,17 +144,21 @@ $\blacktriangleright$ \textbf{Exercises 4.13.\quad Solution.}
 
 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+$\blacktriangleright$ \textbf{Appendices} 
 
-```{r}
-summary(cars)
+
+\textbf{Code of function ConfusionTable()} 
+```{r, eval = FALSE}
+ConfusionTable <- function(ct){
+    accuracy <- (ct[1, 1] + ct[2, 2]) / (sum(ct))
+    TPr <- ct[2, 2] / (ct[1, 2] + ct[2, 2])
+    FPr <- ct[2, 1] / (ct[1, 1] + ct[2, 1])
+    precision <- ct[2, 2] / (ct[2, 1] + ct[2, 2])
+    error <- 1 - accuracy
+    result <- list(accuracy, TPr, FPr, precision, error)
+    names(result) <- c("Accuracy", "True Positive Rate", 
+                       "False Posistive Rate", "Precision", 
+                       "Total Error Rate")
+    return(result)
+}
 ```
-
-You can also embed plots, for example:
-
-```{r, echo=FALSE}
-plot(cars)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-s
