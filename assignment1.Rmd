@@ -39,6 +39,32 @@ $\blacktriangleright$ \textbf{Exercises 2.6.\quad Solution.}
 
 $\blacktriangleright$ \textbf{Exercises 2.10.\quad Solution.} 
 
+(a). 
+```{r}
+library(MASS)
+attach(Boston)
+?Boston
+```
+The Boston data frame has 506 rows and 14 columns.
+The meaning of columns are
+$$
+\begin{aligned}
+crim&:\text{per capita crime rate by town}\\
+zn&:\text{proportion of residential land zoned for lots over 25,000 sq.ft}\\
+indus&:\text{proportion of non-retail business acres per town}\\
+chas&:\text{Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)}\\
+nox&:\text{nitrogen oxides concentration (parts per 10 million)}\\
+rm&:\text{average number of rooms per dwelling}\\
+age&:\text{proportion of owner-occupied units built prior to 1940}\\
+dis&:\text{weighted mean of distances to five Boston employment centres}\\
+rad&:\text{index of accessibility to radial highways}\\
+tax&:\text{full-value property-tax rate per \$10,000}\\
+ptratio&:\text{pupil-teacher ratio by town}\\
+black&:\text{$1000(Bk - 0.63)^2$ where $Bk$ is the proportion of blacks by town}\\
+lstat&:\text{lower status of the population (percent)}\\
+medv&:\text{median value of owner-occupied homes in \$1000s}
+\end{aligned}
+$$
 
 
 $\blacktriangleright$ \textbf{Exercises 3.5.\quad Solution.} 
@@ -121,11 +147,10 @@ ConfusionTable <- function(ct){
     accuracy <- (ct[1, 1] + ct[2, 2]) / (sum(ct))
     TPr <- ct[2, 2] / (ct[1, 2] + ct[2, 2])
     FPr <- ct[2, 1] / (ct[1, 1] + ct[2, 1])
-    precision <- ct[2, 2] / (ct[2, 1] + ct[2, 2])
     error <- 1 - accuracy
-    result <- list(accuracy, TPr, FPr, precision, error)
+    result <- list(accuracy, TPr, FPr, error)
     names(result) <- c("Accuracy", "True Positive Rate", 
-                       "False Posistive Rate", "Precision", 
+                       "False Posistive Rate", 
                        "Total Error Rate")
     return(result)
 }
@@ -184,7 +209,7 @@ ct
 ConfusionTable(ct)$Accuracy
 ```
 
-(h) To compare the these four methods, the simplest way is to plot the ROC curve of each method. Plots are list below, ans R can also provide the AUCs of four methods. We can see that QDA (the third one) has the largest AUC, which is 0.4914. Thus, we can say that QDA may be the best classifier among these four methods for this dataset.
+(h) To compare the these four methods, the simplest way is to plot the ROC curve of each method. Plots are list below, ans R can also provide the AUCs of four methods. We can see that QDA (the third one) has the largest AUC, which is 0.4914. In this respect, we can say that QDA may be the best classifier among these four methods for this dataset.
 ```{r, echo = FALSE}
 par(mfrow = c(2, 2))
 glm.probs <- predict(logit.fit, Weekly.test, type="response")
@@ -208,10 +233,46 @@ plot(g, main = "KNN")
 
 ```
 
+(i). First, I try different value of $K$ to fit the KNN models.
+```{r}
+set.seed(1)
+knn.pred=knn(train.X,test.X,train.Direction,k=2)
+ct <- table(knn.pred, test.Direction)
+ct
+ConfusionTable(ct)
+knn.pred=knn(train.X,test.X,train.Direction,k=4)
+ct <- table(knn.pred, test.Direction)
+ct
+ConfusionTable(ct)
+knn.pred=knn(train.X,test.X,train.Direction,k=7)
+ct <- table(knn.pred, test.Direction)
+ct
+ConfusionTable(ct)
+```
+We can see that when $K=4$, the KNN model performances best. But it still has relatively high value of error rates, 41.34%, which is only 2 percents lower than the useless trivial classifier.
 
+For QDA, I try to introduce more variable, beginning with Lag1.
+```{r}
+Weekly.test <- Weekly[!train, ]
+qda.fit <- qda(Direction ~ Lag2 + Lag1, data = Weekly, subset = train)
+qda.class <- predict(qda.fit, Weekly.test)$class
+ct <- table(qda.class, Weekly.test$Direction)
+ct
+ConfusionTable(ct)
+```
+Compared to model without Lag1, the full model shows worse performance, so there is no need to introduce more predictors. Similarly, LDA with more predictors also perform worse than that just including Lag2.
 
-
-
+For logistic regression, we do not want to introduce more variable, since it does not work on LDA. So we try to introduce the high ordet term of Lag2, like $Lag2^2$ or $Lag2^3$.
+```{r}
+logit.fit <- glm(Direction ~ Lag2 + Lag2^2 + Lag2^3, family = binomial, data = Weekly, subset = train)
+glm.probs <- predict(logit.fit, Weekly.test, type="response")
+glm.pred <- rep("Down", nrow(Weekly.test))
+glm.pred[glm.probs > 0.50] <- "Up"
+ct <- table(glm.pred, Weekly.test$Direction)
+ct
+ConfusionTable(ct)
+```
+The result indicates that there is still no improve in this way.
 
 $\blacktriangleright$ \textbf{Exercises 4.13.\quad Solution.} 
 
@@ -269,15 +330,52 @@ ct <- table(logis.pred,Boston.test$crim01)
 ct
 ConfusionTable(ct)
 logis.fit <- glm(crim01 ~ nox + dis + rad + ptratio, data=Boston.train, family = binomial)
-logis.probs=predict(logis.fit, Boston.test, type="response")
+logis.probs <- predict(logis.fit, Boston.test, type="response")
 logis.pred <- rep(0, nrow(Boston.test))
 logis.pred[logis.probs > 0.50] <- 1
 ct <- table(logis.pred,Boston.test$crim01)
 ct
 ConfusionTable(ct)
 ```
-The model with seven predictors performs a little better than the one with four predictors, and also a little better compared to the LDA with four predictors. It is notable that if we fit a logistic regression model with the four predictor, but use the interaction $nox*dis$ instead of the predictors themselves, we can get similar result like the model with seven predictos. So sometimes maybe we can use a nonlinear boundary in low dimension to replace the linear boundary in high dimension without reduce the performance, and it is easier to interpret with less predictors.
+The model with seven predictors performs a little better than the one with four predictors, and also a little better compared to the LDA with four predictors. It is notable that if we fit a logistic regression model with the four predictor, but use the interaction $nox*dis$ instead of the predictors themselves, we can get similar result like the model with seven predictos. So sometimes maybe we can use a nonlinear boundary in low dimension to replace the linear boundary in high dimension without reduce the performance, but it becomes easier to interpret with less predictors.
 
+Because of the previous attempts, we should believe that the four variables --$nox,\ dis,\ rad,\ ptratio$ is enough to make a good prediction. Then we use these predictors to fit the KNN models with differen $K$.
+```{r}
+set.seed(1)
+Boston.train.knn <- Boston.train[,c("nox","dis","rad","ptratio")]
+Boston.test.knn <-  Boston.test[,c("nox","dis","rad","ptratio")]
+knn.pred <- knn(Boston.train.knn,Boston.test.knn,Boston.train$crim01,k=1)
+ct <- table(knn.pred, Boston.test$crim01)
+ct
+ConfusionTable(ct)
+
+knn.pred=knn(Boston.train.knn,Boston.test.knn,Boston.train$crim01,k=2)
+ct <- table(knn.pred, Boston.test$crim01)
+ct
+ConfusionTable(ct)
+
+knn.pred=knn(Boston.train.knn,Boston.test.knn,Boston.train$crim01,k=3)
+ct <- table(knn.pred, Boston.test$crim01)
+ct
+ConfusionTable(ct)
+
+knn.pred=knn(Boston.train.knn,Boston.test.knn,Boston.train$crim01,k=4)
+ct <- table(knn.pred, Boston.test$crim01)
+ct
+ConfusionTable(ct)
+
+knn.pred=knn(Boston.train.knn,Boston.test.knn,Boston.train$crim01,k=5)
+ct <- table(knn.pred, Boston.test$crim01)
+ct
+ConfusionTable(ct)
+
+
+knn.pred=knn(Boston.train.knn,Boston.test.knn,Boston.train$crim01,k=11)
+ct <- table(knn.pred, Boston.test$crim01)
+ct
+ConfusionTable(ct)
+```
+We can see that when $K=1$, the true positive rate and the accuracy are both largest. Furthermore it is much better than the other two kinds of models. We can infer that the decision boundary is very likely to be nonlinear, even more complicated that quadratic form.
 
 $\blacktriangleright$ \textbf{Appendices} 
 
