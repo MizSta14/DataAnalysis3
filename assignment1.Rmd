@@ -229,13 +229,13 @@ y <- lm.fit$coefficients[-1]
 ```
 Variable zn, variable dis, variable rad, variable black and variable medv are significant in this model, i.e., they can reject the null hypothesis of zero. Even the F-test shows that the model is useful and significant, the coefficient of determination $R^2$ is only 0.454, which means less than 50% of data can be expained by this model. We may think that this model is underfitted.
 
-(c).
+(c).Most coefficients do not change so much, but the coefficients of nox are quite different between the single regression model and the multiple regression model. This may be because there is multicollinearity between nox and some variables, then the estimate will be greatly affected by the variables which are already included in the model.
+
 ```{r, echo = FALSE}
 plot(x, y)
 text(x,y,labels=names(y))
 abline(0, 1)
 ```
-Most coefficients do not change so much, but the coefficients of nox are quite different between the single regression model and the multiple regression model. This may be because there is multicollinearity between nox and some variables, then the estimate will be greatly affected by the variables which are already included in the model.
 
 (d). Full outputs are omitted because of the length. According to the result of model training, indus, nox, age, dis, ptratio and medv show significant cubic trend. The others 
 ```{r, eval = FALSE}
