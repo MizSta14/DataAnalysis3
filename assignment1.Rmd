@@ -215,7 +215,68 @@ plot(g, main = "KNN")
 
 $\blacktriangleright$ \textbf{Exercises 4.13.\quad Solution.} 
 
+First, we fit the model with all candidate predictor to see which predictors are significant.
+```{r, echo = FALSE}
+attach(Boston)
+subset1 <- c(FALSE, abs(cor(Boston[, 1], Boston[, -1])) > 0.3, TRUE)
+subset2 <- c(FALSE, abs(cor(Boston[, 1], Boston[, -1])) > 0.4, TRUE)
+subset3 <- c(FALSE, abs(cor(Boston[, 1], Boston[, -1])) > 0.5, TRUE)
+Boston$crim01 <- as.numeric(Boston$crim > median(Boston$crim))
+set.seed(1)
+rands <- runif(nrow(Boston))
+test <- rands > quantile(rands, 0.75)
+train <- !test
+Boston.train <- Boston[train, -1]
+Boston.test <- Boston[test, -1]
+glm.fit=glm(crim01 ~ ., data=Boston[, -1], family = binomial)
+summary(glm.fit)
+```
+According the reuslt, we should treat these seven variables -- $zn,\ nox,\ dis,\ rad,\ tax,\ ptratio,\ black,\ medv$ -- as predictor to build the model.
 
+We first try LDA since it is the most inflexible model among these three method.
+```{r}
+lda.fit <- lda(crim01 ~ zn + nox + black + dis + rad + tax + ptratio + medv, data=Boston.train)
+lda.pred=predict(lda.fit,Boston.test)$class
+ct <- table(lda.pred,Boston.test$crim01)
+ct
+ConfusionTable(ct)
+```
+The result is pretty good, with error rate=15.75%, true positive Rate=76.67%, and false positive=8.96%. Then we want remove the not so significant varibales $zn,\ tax,\ black,\ medv$ and refit the model.
+```{r}
+lda.fit <- lda(crim01 ~ nox + dis + rad + ptratio, data=Boston.train)
+lda.pred=predict(lda.fit,Boston.test)$class
+ct <- table(lda.pred,Boston.test$crim01)
+ct
+ConfusionTable(ct)
+```
+The model does not go worse so much, so the the model with four variables may be enough. If we continue to remove variable, for example rad, the result is like
+```{r, echo = FALSE}
+lda.fit <- lda(crim01 ~ nox + dis + ptratio, data=Boston.train)
+lda.pred=predict(lda.fit,Boston.test)$class
+ct <- table(lda.pred,Boston.test$crim01)
+ct
+ConfusionTable(ct)
+```
+The overall performance becomes better, but what is more important is the true positive rate is greatly improved, since in the problem we do not want misclassify a town with high crime rate into the group of low crime rate, which is very dangerous. So we may prefer more a model with high true positive rate than other performance indices. I also try some other changes, but none of them can perform better, so this may be the best model for LDA.
+
+I will use similar steps above to compare the logistic regression model. Also, I fit the model with seven variables and four variables,
+```{r}
+logis.fit <- glm(crim01 ~ zn + nox + black + dis + rad + tax + ptratio + medv, data=Boston.train, family = binomial)
+logis.probs=predict(logis.fit, Boston.test, type="response")
+logis.pred <- rep(0, nrow(Boston.test))
+logis.pred[logis.probs > 0.50] <- 1
+ct <- table(logis.pred,Boston.test$crim01)
+ct
+ConfusionTable(ct)
+logis.fit <- glm(crim01 ~ nox + dis + rad + ptratio, data=Boston.train, family = binomial)
+logis.probs=predict(logis.fit, Boston.test, type="response")
+logis.pred <- rep(0, nrow(Boston.test))
+logis.pred[logis.probs > 0.50] <- 1
+ct <- table(logis.pred,Boston.test$crim01)
+ct
+ConfusionTable(ct)
+```
+The model with seven predictors performs a little better than the one with four predictors, and also a little better compared to the LDA with four predictors. It is notable that if we fit a logistic regression model with the four predictor, but use the interaction $nox*dis$ instead of the predictors themselves, we can get similar result like the model with seven predictos. So sometimes maybe we can use a nonlinear boundary in low dimension to replace the linear boundary in high dimension without reduce the performance, and it is easier to interpret with less predictors.
 
 
 $\blacktriangleright$ \textbf{Appendices} 
