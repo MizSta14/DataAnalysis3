@@ -46,7 +46,7 @@ attach(Boston)
 ?Boston
 ```
 The Boston data frame has 506 rows and 14 columns.
-The meaning of columns are
+Each row represents an observation of a town. The meaning of columns are
 $$
 \begin{aligned}
 crim&:\text{per capita crime rate by town}\\
@@ -66,8 +66,94 @@ medv&:\text{median value of owner-occupied homes in \$1000s}
 \end{aligned}
 $$
 
+(b). 
+```{r, echo = FALSE}
+par(mar = c(0.5, 0.5, 0.5, 0.5))
+```
+
+```{r}
+pairs(Boston, pch = 20, gap = 0, cex = 0.2)
+```
+We can see that nox, age and dis seems to have strong relationship with each other, and rm, lstat and medv also have strong relationship in the plots. The other pattern seem not to be that apparent.
+
+
+(c).
+```{r}
+cor(Boston[, 1], Boston[, -1])
+```
+We can see that the rad and tax are relatively highly correlated with crime rate, with 0.63 and 0.58 correlation coefficient respectively. Both of these two correlations are positive.
+
+(d). Yes. No. Almost No.
+
+From the summaries and the boxplots, we can know that crim, zn and medv are right skewed; black is left skewed; rm is fat-tailed.
+```{r}
+summary(Boston)
+library(ggplot2)
+library(reshape)
+B <- melt(as.data.frame(scale(Boston)))
+ggplot(B,aes(x = variable,y = value)) + geom_boxplot()
+```
+
+(e)
+```{r}
+sum(chas == 1)
+```
+
+
+
+(f) From part (d)., the median of pupil-teacher ratio is 19.50.
+
+
+
+(g)
+```{r}
+ind <- which(medv == min(medv))
+ind
+Boston[ind, ]
+```
+The suburbs with lowest median value of owneroccupied homes also have relatively high crime, large population of lower status and proportion of non-retail business acres, which indicates that these suburbs are kind of less developed areas.
+
+
+
+(i) 
+The number of the suburbs average more than seven rooms per dwelling is:
+```{r}
+sum(rm > 7)
+```
+
+The number of the suburbs average more than eight rooms per dwelling is:
+```{r}
+sum(rm > 8)
+```
+Because the maximum of rm is 8.780, then the the suburbs average more than eight rooms per dwelling can be marked as outlier for this dataset.
+
+
+
+
+
 
 $\blacktriangleright$ \textbf{Exercises 3.5.\quad Solution.} 
+
+It is very easy to get the result by using hat matrix. Consider the model
+$$
+\mathbf{Y}=\mathbf{X}\beta
+$$
+where $\mathbf{Y}=[y_1, ..., y_n]^T$, $\mathbf{X}=[x_1, ..., x_n]^T$. Then
+$$
+\hat{\beta}=(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{Y}=\left(\sum_{i=1}^nx_iy_i\right)/\left(\sum_{j=1}^nx_{j}^2\right)
+$$
+so
+$$
+\hat{Y}=\mathbf{X}\hat{\beta}\left(\sum_{i=1}^nx_iy_i\right)/\left(\sum_{j=1}^nx_{j}^2\right)
+$$
+and
+$$
+\hat{y_i}=x_i\left(\sum_{i'=1}^nx_{i'}\right)/\left(\sum_{j=1}^nx_{j}^2\right)y_{i'}=\sum_{i'=1}^n\left(x_ix_{i'}\right)/\left(\sum_{j=1}^nx_{j}^2\right)y_{i'}
+$$
+Thus, 
+$$
+a_{i'}=\left(x_ix_{i'}\right)/\left(\sum_{j=1}^nx_{j}^2\right)
+$$
 
 
 
@@ -75,6 +161,115 @@ $\blacktriangleright$ \textbf{Exercises 3.5.\quad Solution.}
 
 
 $\blacktriangleright$ \textbf{Exercises 3.15.\quad Solution.}
+
+(a). The statistics output is so long, so I omit the full output. From the statistical results, only chas is not significant correlated with crim. From the plots, we can see that indus, nox, rm, dis, rad, tax, black, lstat and medv show relatively apperant relationship with crim.
+
+```{r, echo = FALSE}
+par(mfrow = c(4, 4), mar = c(1, 1, 1, 1))
+x <- rep(0, 13)
+lm.fit <- lm(formula = crim ~ zn, data = Boston)
+plot(Boston$zn, Boston$crim, main = "zn", xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[1] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ indus, data = Boston)
+plot(Boston$indus, Boston$crim, main = 'indus', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[2] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ chas, data = Boston)
+plot(Boston$chas, Boston$crim, main = 'chas', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[3] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ nox, data = Boston)
+plot(Boston$nox, Boston$crim, main = 'nox', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[4] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ rm, data = Boston)
+plot(Boston$rm, Boston$crim, main = 'rm', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[5] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ age, data = Boston)
+plot(Boston$age, Boston$crim, main = 'age', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[6] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ dis, data = Boston)
+plot(Boston$dis, Boston$crim, main = 'dis', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[7] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ rad, data = Boston)
+plot(Boston$rad, Boston$crim, main = 'rad', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[8] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ tax, data = Boston)
+plot(Boston$tax, Boston$crim, main = 'tax', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[9] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ ptratio, data = Boston)
+plot(Boston$ptratio, Boston$crim, main = 'ptratio', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[10] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ black, data = Boston)
+plot(Boston$black, Boston$crim, main = 'black', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[11] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ lstat, data = Boston)
+plot(Boston$lstat, Boston$crim, main = 'lstat', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[12] <- lm.fit$coefficients[2]
+lm.fit <- lm(formula = crim ~ medv, data = Boston)
+plot(Boston$medv, Boston$crim, main = 'mdev', xaxt = 'n', yaxt = 'n')
+abline(lm.fit)
+x[13] <- lm.fit$coefficients[2]
+```
+
+(b).
+```{r}
+lm.fit <- lm(formula = crim ~ ., data = Boston)
+summary(lm.fit)
+y <- lm.fit$coefficients[-1]
+```
+Variable zn, variable dis, variable rad, variable black and variable medv are significant in this model, i.e., they can reject the null hypothesis of zero. Even the F-test shows that the model is useful and significant, the coefficient of determination $R^2$ is only 0.454, which means less than 50% of data can be expained by this model. We may think that this model is underfitted.
+
+(c).
+```{r, echo = FALSE}
+plot(x, y)
+text(x,y,labels=names(y))
+abline(0, 1)
+```
+Most coefficients do not change so much, but the coefficients of nox are quite different between the single regression model and the multiple regression model. This may be because there is multicollinearity between nox and some variables, then the estimate will be greatly affected by the variables which are already included in the model.
+
+(d). Full outputs are omitted because of the length. According to the result of model training, indus, nox, age, dis, ptratio and medv show significant cubic trend. The others 
+```{r, eval = FALSE}
+lm.fit <- lm(formula = crim ~ zn + I(zn^2) + I(zn^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ indus + I(indus^2) + I(indus^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ chas + I(chas^2) + I(chas^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ nox + I(nox^2) + I(nox^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ rm + I(rm^2) + I(rm^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ age + I(age^2) + I(age^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ dis + I(dis^2) + I(dis^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ rad + I(rad^2) + I(rad^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ tax + I(tax^2) + I(tax^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ ptratio + I(ptratio^2) + I(ptratio^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ black + I(black^2) + I(black^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ lstat + I(lstat^2) + I(lstat^3), data = Boston)
+summary(lm.fit)
+lm.fit <- lm(formula = crim ~ medv + I(medv^2) + I(medv^3), data = Boston)
+summary(lm.fit)
+```
+
+
+
+
 
 
 
