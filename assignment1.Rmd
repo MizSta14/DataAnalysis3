@@ -97,6 +97,9 @@ $\blacktriangleright$ \textbf{Exercises 4.10.\quad Solution.}
 rm(list = ls())
 library(ISLR)
 library(ggplot2)
+library(MASS)
+library(class)
+library(pROC)
 attach(Weekly)
 ```
 
@@ -112,7 +115,7 @@ logit.fit <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume,
 summary(logit.fit)
 ```
 
-(c). Using threshold = 0.5, 
+(c). Using threshold = 0.5, we can get the confusion table as below. At a first glance, the prediction accuracy is 56.11% and the error rate is 43.89%, which is not so good but acceptable, since the prediction of trend of stock index is so difficult. The true positive rate is so good as 92.07%, but the false positive is also too high (almost 90%), which is catastrophic. So we should review the accuracy and error rate. Suppose we have a trivial classifier which always predict "UP". Then the error rate of this classifier is $484/1089\times 100\%=44.44\%$, which is just slightly worse than the logistic regression! So, the logsitic regression using all variables as predictors is almost useless for this case.
 ```{r, echo = FALSE}
 ConfusionTable <- function(ct){
     accuracy <- (ct[1, 1] + ct[2, 2]) / (sum(ct))
@@ -131,11 +134,82 @@ ConfusionTable <- function(ct){
 ```{r}
 glm.probs <- predict(logit.fit,type="response")
 glm.pred <- rep("Down",nrow(Weekly))
-glm.pred[glm.probs > 0.50]="Up"
+glm.pred[glm.probs > 0.50] <- "Up"
 ct <- table(glm.pred, Direction)
 ct
 ConfusionTable(ct)
 ```
+
+(d). The overall fraction of correct predictions is the accuracy of the classifier, which is 62.5%.
+```{r}
+train <- Year <= 2008
+Weekly.test <- Weekly[!train, ]
+logit.fit <- glm(Direction ~ Lag2, family = binomial, data = Weekly, subset = train)
+glm.probs <- predict(logit.fit, Weekly.test, type="response")
+glm.pred <- rep("Down", nrow(Weekly.test))
+glm.pred[glm.probs > 0.50] <- "Up"
+ct <- table(glm.pred, Weekly.test$Direction)
+ct
+ConfusionTable(ct)$Accuracy
+```
+
+(e). The overall fraction of correct predictions is 62.5%.
+```{r}
+lda.fit <- lda(Direction ~ Lag2, data = Weekly, subset = train)
+lda.class <- predict(lda.fit, Weekly.test)$class
+ct <- table(lda.class,Weekly.test$Direction)
+ct
+ConfusionTable(ct)$Accuracy
+```
+
+(f).The overall fraction of correct predictions is 58.65%.
+```{r}
+qda.fit <- qda(Direction ~ Lag2, data = Weekly, subset = train)
+qda.class <- predict(qda.fit, Weekly.test)$class
+ct <- table(qda.class, Weekly.test$Direction)
+ct
+ConfusionTable(ct)$Accuracy
+```
+
+(g). The overall fraction of correct predictions is 50%.
+```{r}
+train.X <- matrix(Lag2[train])
+test.X <- matrix(Lag2[!train])
+train.Direction <- Direction[train]
+test.Direction <- Direction[!train]
+set.seed(1)
+knn.pred <- knn(train.X, test.X, train.Direction, k = 1)
+ct <- table(knn.pred, test.Direction)
+ct
+ConfusionTable(ct)$Accuracy
+```
+
+(h) To compare the these four methods, the simplest way is to plot the ROC curve of each method. Plots are list below, ans R can also provide the AUCs of four methods. We can see that QDA (the third one) has the largest AUC, which is 0.4914. Thus, we can say that QDA may be the best classifier among these four methods for this dataset.
+```{r, echo = FALSE}
+par(mfrow = c(2, 2))
+glm.probs <- predict(logit.fit, Weekly.test, type="response")
+Weekly.test$prob <- glm.probs
+g <- roc(Direction ~ prob, data = Weekly.test)
+plot(g, main = "Logistic Regression")
+lda.probs <- predict(lda.fit, Weekly.test)$posterior
+Weekly.test$prob <- lda.probs[, 2]
+g <- roc(Direction ~ prob, data = Weekly.test)
+plot(g, main = "LDA")
+qda.probs <- predict(qda.fit, Weekly.test)$posterior
+Weekly.test$prob <- qda.probs[, 2]
+g <- roc(Direction ~ prob, data = Weekly.test)
+plot(g, main = "QDA")
+knn.pred <- knn(train.X, test.X, train.Direction, k = 1, prob = TRUE)
+prob <- attr(knn.pred, "prob")
+prob <- ifelse(knn.pred == "Down", 1-prob, prob)
+Weekly.test <- data.frame(test.Direction, prob)
+g <- roc(test.Direction ~ prob, data = Weekly.test)
+plot(g, main = "KNN")
+
+```
+
+
+
 
 
 
