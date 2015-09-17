@@ -258,7 +258,7 @@ head(cvError.sorted, n = 5)
 tail(cvError.sorted, n = 5)
 ```
 
-
+The residual plot seems not so bad, only one outlier--data of 10/7. But the data point is too concentrated, which may make some data with large $y$ get higt leverage. The P-value of Shapiro-Wilk test is $`r shapiro.test(res)$p.value`$, which implies that the residuals is not normal in fact. So the assumption of regression is not valid, then the model is not appropriate. This also explain why the model select procedure is not stable, from which the "best" model will change by using different random seed, because we chose a wrong form of model.
 
 
 
@@ -342,4 +342,15 @@ For 15 models with no interaction, the CVs are
 ```{r}
 best.noint
 ```
-So the best model is "`r paste("glu~", names(best.noint))`", with CV=`r best.noint`.
+So the best model is "`r names(best.noint)`", with CV=`r best.noint`.
+
+Similarly, For 15 models with interaction, the CVs are
+```{r}
+best.inter
+```
+So the best model is "$`r names(best.inter)`$", with CV=`r best.inter`.
+
+
+
+
+
