@@ -66,10 +66,10 @@ for (i in 1:4){
 cv.error2
 ```
 
-(e). The model which has lowerest LOOCV is the cubic model, which is not what we expect. On one hand, this may be cause by the random error, which makes the quadratic pattern not that obviously. On the other hand, the LOOCV is very close to the MSE, and the model fitting method is to minimize the MSE of training set, so there may be some overfitting problems. Actually, if we try 5-fold or 10-fold cross-validation, we can see that the quadratic model always has the lowerest CV. Furthermore, as the value of $K$ increases, the CV of cubic is decreasing, so we can believe that when $K=n$, the the CV of cubic is the smallest for all $K$.
+(e). The quadratic model has the smallest LOOCV, which is what we expect since we create the data by using two order polynomial.
 
 
-(f). It is easily to see that, for all these four models, only intercept, first order term and quadratic term are significatn. This is different from (c)., but this is what we expect since we create the data like this way.
+(f). It is easily to see that, for all these four models, only intercept, first order term and quadratic term are significatn. It is same to the result of part(e).
 ```{r, echo = FALSE}
 #f
 lm.fit <- list()
@@ -342,7 +342,7 @@ For 15 models with no interaction, the CVs are
 ```{r}
 best.noint
 ```
-So the best model is "`r names(best.noint)`", with CV=`r best.noint`.
+So the best model is "$`r names(best.noint)`$", with CV=`r best.noint`.
 
 Similarly, For 15 models with interaction, the CVs are
 ```{r}
@@ -350,7 +350,80 @@ best.inter
 ```
 So the best model is "$`r names(best.inter)`$", with CV=`r best.inter`.
 
+To be noticed, if we run the code using another seed, the result will change. So according to the experience of problem 3, maybe the form of model is wrong or the predictors are not correlated with the response. I will check the scatterplot matrix,
+```{r}
+pairs(des[c(5:10)], col = c("red", "black")[glu], pch = 20)
+```
 
+From the plot, the variable "geology", "sw" and "slope" seems to be kind of good predictor. And there is no perfect linear classifier for "geology" and "LTA" combination, since this is a exclusive-or problem. But it is really hard to see any apparent boundary. So I still try every linear predictor. 
+```{r}
+regressor <- names(des[5:10])
+indices <- expand.grid(c(TRUE, FALSE), 
+                       c(TRUE, FALSE), 
+                       c(TRUE, FALSE),
+                       c(TRUE, FALSE), 
+                       c(TRUE, FALSE),
+                       c(TRUE, FALSE)
+                       )
+cvError.lin <- rep(NA, 63)
+for (n in 1:63){
+    lmformula <- reformulate(regressor[as.logical(indices[n, ])], 
+                             response = "glu")
+    glm.fit <- glm(lmformula, data = des)
+    cvError.lin[n] <- cv.glm(data = des, 
+                         glmfit = glm.fit, 
+                         K = 10)$delta[2]
+    names(cvError.lin)[n] <- 
+        paste(regressor[as.logical(indices[n, ])], collapse = "+")
+}
+best.lin <- min(cvError.lin)
+names(best.lin) <- names(cvError.lin)[which.min(cvError.lin)]
+```
+So the best linear classifier is "$glu~`r names(best.lin)`$", with CV=`r best.lin`.
 
+Then, I want know how the model with these four variable and all interactions among them,
+```{r}
+glm.fit <- glm(glu~(sw+elevation+slope+LTA)^2, data = des)
+cvError.4.inter <- cv.glm(data = des, 
+                         glmfit = glm.fit, 
+                         K = 10)$delta[2]
+cvError.4.inter
+```
+The CV is $`r cvError.4.inter`$, which is larger than the CV of the linear classifier. Thus, the interactions among these four variable are not necessary.
+
+Next, I want to consider the interaction of the two variable not in the model.
+```{r}
+glm.fit <- glm(glu~sw+elevation+slope+LTA+geology*ELT, data = des)
+cvError.6.inter <- cv.glm(data = des, 
+                         glmfit = glm.fit, 
+                         K = 10)$delta[2]
+cvError.6.inter
+```
+The CV is $`r cvError.6.inter`$, which is also larger than the CV of the linear classifier. Thus, this interactions among these four variable are not necessary.
+
+Then, I try some other interactions. For example, interactions between one of the predictors in linear classifier and one of the predictors not in linear classifier,
+```{r}
+glm.fit <- glm(glu~sw+elevation+slope+LTA+sw*ELT, data = des)
+cvError.1 <- cv.glm(data = des, 
+                         glmfit = glm.fit, 
+                         K = 10)$delta[2]
+cvError.1
+glm.fit <- glm(glu~sw+elevation+slope+LTA+elevation*ELT, data = des)
+cvError.2 <- cv.glm(data = des, 
+                         glmfit = glm.fit, 
+                         K = 10)$delta[2]
+cvError.2
+glm.fit <- glm(glu~sw+elevation+slope+LTA+slope*ELT, data = des)
+cvError.3 <- cv.glm(data = des, 
+                         glmfit = glm.fit, 
+                         K = 10)$delta[2]
+cvError.3
+glm.fit <- glm(glu~sw+elevation+slope+LTA+LTA*ELT, data = des)
+cvError.4 <- cv.glm(data = des, 
+                         glmfit = glm.fit, 
+                         K = 10)$delta[2]
+cvError.4
+```
+The result does not improved significantly. So the linear classifier with four predictor, $sw,~elevation,~slope,~LTA$, is good enough for this dataset. Compared to the two variable model, this classifier reduces the error rate from 24.16% to 16.58%, about one third improvement.
 
 
