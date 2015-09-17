@@ -1,0 +1,345 @@
+---
+title: "STAT 8330 FALL 2015 ASSIGNMENT 2"
+author: "Peng Shao"
+date: "September 15, 2015"
+output: 
+    pdf_document:
+        includes:
+            in_header: mystyles.sty
+---
+```{r, echo = FALSE}
+par(mar = c(3, 3, 3, 3))
+```
+
+$\blacktriangleright$ \textbf{Exercises 5.8.\quad Solution.} 
+
+```{r prepare, echo = FALSE}
+rm(list = ls())
+library(ISLR)
+library(ggplot2)
+library(boot)
+```
+(a). $n=100$ and $p=2$. The model is
+$$
+Y_i=X_i-2X_i^2+\varepsilon_i
+$$
+```{r q8a, echo = FALSE}
+#8
+#a
+set.seed(1)
+y <- rnorm(100)
+x <- rnorm(100)
+y <- x - 2 * x^2 + rnorm(100)
+fun.y <- function(x) return(x - 2 * x^2)
+```
+
+(b). Obivously, the scatterplot has a quadratic pattern of $x$.
+```{r q8b, fig.width=4, fig.height=3, fig.align='center'}
+#b
+data.xy <- data.frame(x, y)
+ggplot(data = data.xy, aes(x = x, y = y)) +
+    geom_point() + 
+    stat_function(fun = fun.y, linetype = 2)
+```
+
+(c).
+```{r}
+#c
+set.seed(2)
+cv.error <- rep(0, 4)
+for (i in 1:4){
+    glm.fit <- glm(y ~ poly(x,i), data = data.xy)
+    cv.error[i] <- cv.glm(data.xy, glm.fit)$delta[1]
+}
+cv.error
+```
+
+(d). The results are same because LOOCV does not use any random samping. It evalutes every observation.
+```{r}
+#d
+set.seed(3)
+cv.error2 <- rep(0, 4)
+for (i in 1:4){
+    glm.fit <- glm(y ~ poly(x,i), data = data.xy)
+    cv.error2[i] <- cv.glm(data.xy, glm.fit)$delta[1]
+}
+cv.error2
+```
+
+(e). The model which has lowerest LOOCV is the cubic model, which is not what we expect. On one hand, this may be cause by the random error, which makes the quadratic pattern not that obviously. On the other hand, the LOOCV is very close to the MSE, and the model fitting method is to minimize the MSE of training set, so there may be some overfitting problems. Actually, if we try 5-fold or 10-fold cross-validation, we can see that the quadratic model always has the lowerest CV. Furthermore, as the value of $K$ increases, the CV of cubic is decreasing, so we can believe that when $K=n$, the the CV of cubic is the smallest for all $K$.
+
+
+(f). It is easily to see that, for all these four models, only intercept, first order term and quadratic term are significatn. This is different from (c)., but this is what we expect since we create the data like this way.
+```{r, echo = FALSE}
+#f
+lm.fit <- list()
+coefs <- list()
+coefs <- rep(NA, 4)
+for (i in 1:4){
+    lm.fit <- lm(y ~ poly(x,i), data = data.xy)
+    coefs[i] <- summary(lm.fit)[4]
+}
+coefs
+# the coefficients seem not quite right
+# previous coefficient unchange
+```
+
+
+
+$\blacktriangleright$ \textbf{Exercises 5.8.\quad Solution.} 
+
+```{r, echo = FALSE}
+#9
+library(MASS)
+attach(Boston)
+```
+
+```{r, echo = FALSE}
+#a
+mean <- mean(medv)
+```
+(a). The mean is $\hat{\mu}=`r mean`$.
+
+
+```{r, echo = FALSE}
+#b
+mean.std <- sd(medv) / sqrt(length(medv))
+```
+(b). The standard error of mean is $SE\{\hat{\mu}\}=`r mean.std`$.
+
+
+(c).  The standard error of mean using bootstrap is $SE_{bootstrap}\{\hat{\mu}\}=0.4119$, which is very close to the estimate found in (b). of 0.4089.
+```{r, echo = FALSE}
+#c
+set.seed(1)
+mean.fn <- function(data, index) 
+    return(c(mean(data[index]), 
+             sqrt(var(data[index]) / length(data))))
+library(boot)
+mean.boot <- boot(medv, mean.fn, R = 1000)
+mean.boot
+```
+
+
+
+(d). The two confidence intervals are listed as below. They are very close.
+```{r, echo = FALSE}
+#d
+ci.t <- t.test(medv)$conf.int
+attr(ci.t, "conf.level") <- NULL
+ci.boot <- boot.ci(mean.boot)$normal[c(2,3)]
+```
+```{r}
+ci.t
+ci.boot
+```
+
+
+```{r, echo = FALSE}
+#e
+median.medv <- median(medv)
+```
+(e). The estimate of median is $\hat{\mu}_{med}=`r median.medv`$.
+
+(f). The estimate standard error of median is 0.3874004, which is smaller than that of mean. Maybe because the estimator of median is a more robust estimator, and the median is a better parameter to describe the center of the population because of the stablity.
+```{r}
+#f
+median.fn <- function(data, index) 
+    return(median(data[index]))
+median.boot <- boot(medv, median.fn, R = 1000)
+median.boot
+```
+
+
+```{r, echo = FALSE}
+#g
+q.10.medv <- quantile(medv, probs = 0.1)
+q.10.medv
+```
+(g). The estimate of tenth percentile is $\hat{\mu}_{0.1}=`r q.10.medv`$.
+
+(h). The estimate standard error of tenth percentile is 0.5113487, which is greater than that of mean. It seems reasonable since tenth percentile contains more information from smaller observations and less infomation from larger observations, while the bootstrap will treat all observations as equally likely to estimate the parameter, which may introduce more variation for estimating the skewed parameter. Remind that the median and the mean summary the information of all observations with equal probability, especially then median. So there is no wonder that the estimate of median has the smallest standard error.
+
+```{r}
+#h
+q.10.fn <- function(data, index) 
+    return(quantile(data[index], probs = 0.1))
+q.10.boot <- boot(medv, q.10.fn, R = 1000)
+q.10.boot
+```
+
+Actually, we know that the stardard error of the estimate of mean is
+$$
+SE\{\hat{\mu}\}=\frac{s}{\sqrt{n}}
+$$
+where $s$ is the standard deviation of the sample. And for large sample, the stardard error of the estimate of $p$th percentile is
+$$
+SE\{\hat{\mu}_{p}\}=\frac{s\sqrt{p(1-p)}}{\sqrt{n}\phi(\Phi^{-1}(p))}=SE\{\hat{\mu}\}\frac{\sqrt{p(1-p)}}{\phi(\Phi^{-1}(p))}
+$$
+where $\phi$ is the pdf of normal distribution and $\Phi^{-1}$ is the quantile function of normal distribution. So there is a ratio between the stardard error of the estimate of mean and that of $p$th percentile. The ratio has a smallest value at $p=0.5$, which means the median. When going to each boundary, this ratio becomes very large, which implies the high variance of tenth percentile. The plot of the ratio is like this:
+
+```{r, echo = FALSE, fig.align='center', fig.height=3, fig.width=4}
+p <- seq(0, 1, 0.01)
+k <- sqrt(p * (1 - p)) / dnorm(qnorm(p))
+plot(p,k)
+```
+
+$\blacktriangleright$ \textbf{Problem 3.\quad Solution.} 
+
+For this linear regression problem, if we only consider the three predictors and the interactions among them (because when we want to try any other forms of predictor, it means we also need to estimate the form of model, which would be better by nonparametric method), the total number of all possible models will be $2^{2^3-1}-1=127$.
+So it is possible for us to use exhaustive enumeration method to compare all models to select the "best" model based on CV. 
+
+
+
+```{r, echo = FALSE}
+#3
+library(car)
+set.seed(1)
+pages <- read.table(file = "./pages.dat")
+names(pages) <- c("date",
+                  "pages",
+                  "cl", 
+                  "il", 
+                  "ld")
+par(mar = c(2, 2, 2, 2))
+#pairs(pages)
+#cor(pages)
+```
+```{r, fig.align='center', fig.height=3, fig.width=4}
+regressor <- c(names(pages)[3], 
+               names(pages)[4], 
+               names(pages)[5], 
+               paste(names(pages)[3], 
+                     names(pages)[4], 
+                     sep = "*"), 
+               paste(names(pages)[3], 
+                     names(pages)[5], 
+                     sep = "*"), 
+               paste(names(pages)[4], 
+                     names(pages)[5], 
+                     sep = "*"), 
+               paste(names(pages)[3], 
+                     names(pages)[4], 
+                     names(pages)[5],
+                     sep = "*"))
+indices <- expand.grid(c(TRUE, FALSE), 
+                       c(TRUE, FALSE), 
+                       c(TRUE, FALSE),
+                       c(TRUE, FALSE), 
+                       c(TRUE, FALSE),
+                       c(TRUE, FALSE),
+                       c(TRUE, FALSE)
+                       )
+cvError <- rep(NA, 127)
+for (n in 1:127){
+    lmformula <- reformulate(regressor[as.logical(indices[n, ])], 
+                             response = "pages")
+    glm.fit <- glm(lmformula, data = pages)
+    cvError[n] <- cv.glm(data = pages, 
+                         glmfit = glm.fit, 
+                         K = 5)$delta[2]
+    names(cvError)[n] <- paste(regressor[as.logical(indices[n, ])], 
+                               collapse = "+")
+}
+best <- cvError[which.min(cvError)]
+best.lm <- lm(as.formula(paste("pages", names(best), sep = "~")), 
+              data = pages)
+res <- resid(best.lm)
+yhat <- predict(best.lm)
+plot(yhat, res)
+outlierTest(best.lm)
+```
+
+After running the code, we can get the best mode is \text{"`r paste("pages", names(best), sep = "~")`"} with the CV=`r best`. Since we have 127 models, which too many to display, so I only show the best 5 model and the worst 5 model.
+```{r}
+options(width = 60)
+cvError.sorted <- sort(cvError)
+head(cvError.sorted, n = 5)
+tail(cvError.sorted, n = 5)
+```
+
+
+
+
+
+$\blacktriangleright$ \textbf{Problem 4.\quad Solution.} 
+
+It is very similar to problem 3., the main difference is the cost funtion. The cost function for a classification problem is usually the error rate of prediction. So the best model is the model which has smallest error rate.
+```{r}
+#4
+set.seed(1)
+des <- read.table(file = "./des_site1and2sp_2.dat", 
+                  col.names = c("glu", 
+                                "nud", 
+                                "utmn", 
+                                "utme", 
+                                "sw", 
+                                "elevation", 
+                                "slope", 
+                                "geology", 
+                                "LTA", 
+                                "ELT", 
+                                "site", 
+                                "subplot"))
+attach(des)
+glu <- as.factor(glu)
+geology <- as.factor(geology)
+LTA <- as.factor(LTA)
+ELT <- as.factor(ELT)
+site <- as.factor(site)
+costFunction <- function(y, yhat) return(mean(y != (yhat > 0.5)))
+cvError.inter <- rep(NA, 15)
+cvError.noint <- rep(NA, 15)
+n <- 1
+for (i in 5:9){
+    for (j in (i+1):10){
+        glmformula.inter <- as.formula(
+            paste("glu~(", 
+                  paste(names(des)[c(i, j)], 
+                        collapse = "+"), 
+                  ")^2"
+            )
+        )
+        glmformula.noint <- as.formula(
+            paste("glu~", 
+                  paste(names(des)[c(i, j)], 
+                        collapse = "+")
+            )
+        )
+        logis.fit.inter <- glm(glmformula.inter,
+                               family = "binomial", 
+                               data = des)
+        logis.fit.noint <- glm(glmformula.noint,
+                               family = "binomial", 
+                               data = des)
+        cvError.inter[n] <- cv.glm(data = des, 
+                                   glmfit = logis.fit.inter, 
+                                   cost = costFunction, 
+                                   K = 10)$delta[1]
+        cvError.noint[n] <- cv.glm(data = des, 
+                                   glmfit = logis.fit.noint, 
+                                   cost = costFunction, 
+                                   K = 10)$delta[1]
+        names(cvError.inter)[n] <- paste(
+            as.character(glmformula.inter)[2],
+            as.character(glmformula.inter)[1],
+            as.character(glmformula.inter)[3],
+            collapse = " ")
+        names(cvError.noint)[n] <- paste(
+            as.character(glmformula.noint)[2],
+            as.character(glmformula.noint)[1],
+            as.character(glmformula.noint)[3],
+            collapse = " ")
+        n <- n + 1
+    }
+}
+best.inter <- min(cvError.inter)
+best.noint <- min(cvError.noint)
+names(best.inter) <- names(cvError.inter)[which.min(cvError.inter)]
+names(best.noint) <- names(cvError.noint)[which.min(cvError.inter)]
+```
+For 15 models with no interaction, the CVs are
+```{r}
+best.noint
+```
+So the best model is "`r paste("glu~", names(best.noint))`", with CV=`r best.noint`.

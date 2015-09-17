@@ -30,7 +30,7 @@ set.seed(3)
 cv.error2 <- rep(0, 4)
 for (i in 1:4){
     glm.fit <- glm(y ~ poly(x,i), data = data.xy)
-    cv.error[i] <- cv.glm(data.xy, glm.fit)$delta[1]
+    cv.error2[i] <- cv.glm(data.xy, glm.fit)$delta[1]
 }
 cv.error2
 
@@ -101,28 +101,50 @@ names(pages) <- c("date",
                   "countliners", 
                   "inchesliners", 
                   "linersdisplay")
-par(mar = c(1, 1, 1, 1))
+par(mar = c(2, 2, 2, 2))
 pairs(pages)
 correlation <- cor(pages)
-cvError <- rep(NA, 7)
-for (i in 0:1){
-    for (j in 0:1){
-        for (k in 0:1){
-            if (i == 0 & j == 0 & k == 0) next
-            n <- i * 2^0 + j * 2^1 + k * 2^2
-            ind <- as.logical(c(0, 0, i, j, k))
-            lmformula <- reformulate(names(pages)[ind], 
-                                     response = "pages")
-            glm.fit <- glm(lmformula, data = pages)
-            cvError[n] <- cv.glm(data = pages, 
-                                 glmfit = glm.fit, 
-                                 K = 5)$delta[2]
-            names(cvError)[n] <- paste(names(pages)[ind], 
-                                       collapse = ",")
-        }
-    }
+regressor <- c(names(pages)[3], 
+               names(pages)[4], 
+               names(pages)[5], 
+               paste(names(pages)[3], 
+                     names(pages)[4], 
+                     sep = " * "), 
+               paste(names(pages)[3], 
+                     names(pages)[5], 
+                     sep = " * "), 
+               paste(names(pages)[4], 
+                     names(pages)[5], 
+                     sep = " * "), 
+               paste(names(pages)[3], 
+                     names(pages)[4], 
+                     names(pages)[5],
+                     sep = " * "))
+indices <- expand.grid(c(TRUE, FALSE), 
+                       c(TRUE, FALSE), 
+                       c(TRUE, FALSE),
+                       c(TRUE, FALSE), 
+                       c(TRUE, FALSE),
+                       c(TRUE, FALSE),
+                       c(TRUE, FALSE)
+                       )
+cvError <- rep(NA, 127)
+for (n in 1:127){
+    lmformula <- reformulate(regressor[as.logical(indices[n, ])], 
+                             response = "pages")
+    glm.fit <- glm(lmformula, data = pages)
+    cvError[n] <- cv.glm(data = pages, 
+                         glmfit = glm.fit, 
+                         K = 5)$delta[2]
+    names(cvError)[n] <- paste(regressor[as.logical(indices[n, ])], 
+                               collapse = " + ")
 }
-names(which.min(cvError))
+best <- names(which.min(cvError))
+best.lm <- lm(as.formula(paste("pages", best, sep = " ~ ")), 
+              data = pages)
+res <- resid(best.lm)
+yhat <- predict(best.lm)
+plot(yhat, res)
 
 
 #4
@@ -145,7 +167,7 @@ geology <- as.factor(geology)
 LTA <- as.factor(LTA)
 ELT <- as.factor(ELT)
 site <- as.factor(site)
-costFunction <- function(y, yhat) return(sum(y != (yhat > 0.5)))
+costFunction <- function(y, yhat) return(mean(y != (yhat > 0.5)))
 cvError.inter <- rep(NA, 15)
 cvError.noint <- rep(NA, 15)
 n <- 1
