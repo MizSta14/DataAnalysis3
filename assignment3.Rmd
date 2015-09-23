@@ -1,0 +1,128 @@
+---
+title: "STAT 8330 FALL 2015 ASSIGNMENT 3"
+author: "Peng Shao"
+date: "September 19, 2015"
+output: 
+    pdf_document:
+        includes:
+            in_header: mystyles3.sty
+---
+`r knitr::opts_chunk$set(cache=TRUE)`
+
+## Exercises 6.9.
+### Solution.
+
+```{r a, echo = FALSE}
+rm(list = ls())
+library(ISLR)
+library(ggplot2)
+library(boot)
+library(glmnet)
+library(leaps)
+library(pls)
+library(MASS)
+library(knitr)
+
+# 9
+set.seed(1)
+attach(College)
+# (a)
+set.seed(1)
+dim(College)
+train.ind <- sample(1:nrow(College), nrow(College)/2)
+test.ind <- -train.ind
+College.train <- College[train.ind, ]
+College.test <- College[test.ind, ]
+
+# (b).
+set.seed(1)
+lm.fit_1 <- lm(Apps ~ ., data = College.train)
+lm.pred <- predict(lm.fit_1, newdata = College.test)
+mean((lm.pred - College.test$Apps)^2)
+
+# (c).
+set.seed(1)
+ridge.cv.out <- cv.glmnet(x = model.matrix(Apps ~ .,College.train)[,-2], 
+                          y = College.train$Apps, 
+                          alpha = 0)
+ridge.bestlam <- ridge.cv.out$lambda.min
+ridge.mod <- glmnet(x = model.matrix(Apps ~ .,College.train)[,-2], 
+                    y = College.train$Apps, 
+                    alpha = 0, 
+                    lambda = ridge.bestlam)
+ridge.pred <- predict(ridge.mod,
+                      s = ridge.bestlam,
+                      newx = model.matrix(Apps ~ ., College.test)[,-2])
+mean((ridge.pred - College.test$Apps)^2)
+
+# (d).
+set.seed(1)
+lasso.cv.out <- cv.glmnet(x = model.matrix(Apps ~ ., College.train)[,-2], 
+                          y = College.train$Apps, 
+                          alpha = 1)
+lasso.bestlam <- lasso.cv.out$lambda.min
+lasso.mod <- glmnet(x = model.matrix(Apps ~ ., College.train)[,-2], 
+                    y = College.train$Apps, 
+                    alpha = 1, 
+                    lambda = lasso.bestlam)
+lasso.pred <- predict(lasso.mod,
+                      s = lasso.bestlam,
+                      newx = model.matrix(Apps ~ ., College.test)[,-2])
+mean((lasso.pred - College.test$Apps)^2)
+lasso.mod.full <- glmnet(x = model.matrix(Apps ~ ., College)[,-2], 
+                         y = College$Apps, 
+                         alpha = 1, 
+                         lambda = lasso.bestlam)
+lasso.coef <- predict(lasso.mod.full,
+                      type="coefficients",
+                      s=lasso.bestlam)[1:18,]
+lasso.coef <- lasso.coef[lasso.coef!=0]
+lasso.coef
+
+
+# (e)
+set.seed(1)
+pcr.fit <- pcr(Apps ~ ., 
+               data = College.train, 
+               scale = TRUE, 
+               validation = "CV")
+validationplot(pcr.fit, 
+               val.type = "MSEP")
+pcr.pred <- predict(pcr.fit, 
+                    model.matrix(Apps ~ ., College.test)[,-2], 
+                    ncomp = 16)
+mean((pcr.pred - College.test$Apps)^2)
+pcr.fit.full <- pcr(Apps ~ ., 
+                    data = College,  
+                    scale = TRUE, 
+                    ncomp = 16)
+summary(pcr.fit.full)
+
+
+# (f)
+set.seed(1)
+plsr.fit <- plsr(Apps ~ ., 
+                 data = College.train, 
+                 scale = TRUE, 
+                 validation = "CV")
+validationplot(plsr.fit, 
+               val.type = "MSEP")
+plsr.pred <- predict(plsr.fit, 
+                     model.matrix(Apps ~ ., College.test)[,-2], 
+                     ncomp = 10)
+mean((plsr.pred - College.test$Apps)^2)
+plsr.fit.full <- pcr(Apps ~ ., 
+                     data = College,  
+                     scale = TRUE, 
+                     ncomp = 10)
+summary(plsr.fit.full)
+detach(College)
+
+# 2
+attach(Boston)
+```
+
+# Appendix
+
+```{r, ref.label=knitr::all_labels(), eval=FALSE, cache=FALSE}
+```

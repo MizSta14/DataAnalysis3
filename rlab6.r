@@ -3,7 +3,7 @@
 # Best Subset Selection
 
 library(ISLR)
-fix(Hitters)
+#fix(Hitters)
 names(Hitters)
 dim(Hitters)
 sum(is.na(Hitters$Salary))
@@ -140,7 +140,7 @@ plot(cv.out)
 bestlam=cv.out$lambda.min
 lasso.pred=predict(lasso.mod,s=bestlam,newx=x[test,])
 mean((lasso.pred-y.test)^2)
-out=glmnet(x,y,alpha=1,lambda=grid)
+out=glmnet(x,y,alpha=1,lambda=bestlam)
 lasso.coef=predict(out,type="coefficients",s=bestlam)[1:20,]
 lasso.coef
 lasso.coef[lasso.coef!=0]
