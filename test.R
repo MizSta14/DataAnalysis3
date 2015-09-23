@@ -217,10 +217,24 @@ pcr.pred <- predict(pcr.fit,
                     ncomp = M)
 mean((pcr.pred - test.Boston$crim)^2)
 
+# (g)
+set.seed(1)
+plsr.fit <- plsr(crim ~ ., 
+               data = train.Boston, 
+               scale = TRUE, 
+               validation = "CV")
+validationplot(plsr.fit, 
+               val.type = "MSEP")
+M.ind <- which.min(RMSEP(plsr.fit)$val[1, 1, ])
+best.plsr.fit <- attr(RMSEP(plsr.fit)$val, "dimnames")$model[M.ind]
+M <- as.numeric(gsub("([0-9]+).*$", "\\1", best.pcr.fit))
+plsr.pred <- predict(plsr.fit, 
+                    model.matrix(crim ~ ., test.Boston)[,-1], 
+                    ncomp = M)
+mean((plsr.pred - test.Boston$crim)^2)
 
-
-
-
+# 3
+if
 
 
 
