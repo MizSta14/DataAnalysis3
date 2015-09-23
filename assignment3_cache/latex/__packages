@@ -1,0 +1,12 @@
+base
+ISLR
+ggplot2
+boot
+Matrix
+foreach
+glmnet
+leaps
+pls
+MASS
+plyr
+dplyr

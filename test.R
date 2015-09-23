@@ -1,3 +1,4 @@
+setwd("~/Documents/git/DataAnalysis3")
 rm(list = ls())
 library(ISLR)
 library(ggplot2)
@@ -6,6 +7,8 @@ library(glmnet)
 library(leaps)
 library(pls)
 library(MASS)
+library(plyr)
+library(dplyr)
 
 # 9
 set.seed(1)
@@ -110,7 +113,7 @@ attach(Boston)
 # (a)
 
 set.seed(1)
-train=sample(c(TRUE,FALSE), nrow(Hitters),rep=TRUE)
+train=sample(c(TRUE,FALSE), nrow(Boston),rep=TRUE)
 train.Boston <- Boston[train, ]
 test.Boston <- Boston[!train, ]
 # (b)
@@ -220,21 +223,105 @@ mean((pcr.pred - test.Boston$crim)^2)
 # (g)
 set.seed(1)
 plsr.fit <- plsr(crim ~ ., 
-               data = train.Boston, 
-               scale = TRUE, 
-               validation = "CV")
+                 data = train.Boston, 
+                 scale = TRUE, 
+                 validation = "CV")
 validationplot(plsr.fit, 
                val.type = "MSEP")
 M.ind <- which.min(RMSEP(plsr.fit)$val[1, 1, ])
 best.plsr.fit <- attr(RMSEP(plsr.fit)$val, "dimnames")$model[M.ind]
-M <- as.numeric(gsub("([0-9]+).*$", "\\1", best.pcr.fit))
+M <- as.numeric(gsub("([0-9]+).*$", "\\1", best.plsr.fit))
 plsr.pred <- predict(plsr.fit, 
-                    model.matrix(crim ~ ., test.Boston)[,-1], 
-                    ncomp = M)
+                     model.matrix(crim ~ ., test.Boston)[,-1], 
+                     ncomp = M)
 mean((plsr.pred - test.Boston$crim)^2)
 
 # 3
-if
+if (!file.exists("./forestfires.csv"))
+        download.file(url = "http://www.dsi.uminho.pt/~pcortez/forestfires/forestfires.csv", 
+                      destfile = "./forestfires.csv")
+forestfires <- read.csv(file = "./forestfires.csv", 
+                        header = TRUE)
+Data <- subset(mutate(forestfires, log_area = log(area + 1)), 
+               select = -area)
+N <- 12 - 2 + (12 - 1) + (7 - 1)
+set.seed(1)
+train=sample(c(TRUE,FALSE), nrow(Data),rep=TRUE)
+train.Data <- Data[train, ]
+test.Data <- Data[!train, ]
+
+# (d).
+set.seed(1)
+ridge.cv.out <- cv.glmnet(x = model.matrix(log_area ~ ., train.Data)[,-1], 
+                          y = train.Data$log_area, 
+                          alpha = 0)
+ridge.bestlam <- ridge.cv.out$lambda.min
+ridge.mod <- glmnet(x = model.matrix(log_area ~ ., train.Data)[,-1], 
+                    y = train.Data$log_area, 
+                    alpha = 0, 
+                    lambda = ridge.bestlam)
+ridge.pred <- predict(ridge.mod,
+                      s = ridge.bestlam,
+                      newx = model.matrix(log_area ~ ., test.Data)[,-1])
+list("Lambda" = ridge.bestlam, 
+     "MSE" = mean((ridge.pred - test.Data$log_area)^2))
+
+# (e).
+
+set.seed(1)
+lasso.cv.out <- cv.glmnet(x = model.matrix(log_area ~ ., train.Data)[,-1], 
+                          y = train.Data$log_area, 
+                          alpha = 1)
+lasso.bestlam <- lasso.cv.out$lambda.min
+lasso.mod <- glmnet(x = model.matrix(log_area ~ ., train.Data)[,-1], 
+                    y = train.Data$log_area, 
+                    alpha = 1, 
+                    lambda = lasso.bestlam)
+lasso.pred <- predict(lasso.mod,
+                      s = lasso.bestlam,
+                      newx = model.matrix(log_area ~ ., test.Data)[,-1])
+lasso.coef <- predict(lasso.mod, 
+                      type = "coefficients", 
+                      s = lasso.bestlam)[1:14,]
+list("Lambda" = lasso.bestlam, 
+     "MSE" = mean((lasso.pred - test.Data$log_area)^2), 
+     "Non-zero Coefficient Estimates" = lasso.coef[lasso.coef != 0], 
+     "Name of Variables with Zero Coefficient Estimates" = 
+             names(lasso.coef)[which(lasso.coef == 0)])
+
+
+# (f).
+
+set.seed(1)
+pcr.fit <- pcr(log_area ~ ., 
+               data = train.Data[, c(-3, -4)], 
+               scale = TRUE, 
+               validation = "CV")
+validationplot(pcr.fit, 
+               val.type = "MSEP")
+M.ind <- which.min(RMSEP(pcr.fit)$val[1, 1, ])
+best.pcr.fit <- attr(RMSEP(pcr.fit)$val, "dimnames")$model[M.ind]
+M <- as.numeric(gsub("([0-9]+).*$", "\\1", best.pcr.fit))
+pcr.pred <- predict(pcr.fit, 
+                    model.matrix(log_area ~ ., test.Data[, c(-3, -4)])[, -1], 
+                    ncomp = M)
+mean((pcr.pred - test.Data$log_area)^2)
+
+# (g)
+set.seed(1)
+plsr.fit <- plsr(log_area ~ ., 
+                 data = train.Data, 
+                 scale = TRUE, 
+                 validation = "CV")
+validationplot(plsr.fit, 
+               val.type = "MSEP")
+M.ind <- which.min(RMSEP(plsr.fit)$val[1, 1, ])
+best.plsr.fit <- attr(RMSEP(plsr.fit)$val, "dimnames")$model[M.ind]
+M <- as.numeric(gsub("([0-9]+).*$", "\\1", best.plsr.fit))
+plsr.pred <- predict(plsr.fit, 
+                     model.matrix(log_area ~ ., test.Data[,-1], 
+                                  ncomp = M))
+mean((plsr.pred - test.Data$log_area)^2)
 
 
 

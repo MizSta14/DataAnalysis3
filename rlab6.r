@@ -118,8 +118,10 @@ ridge.pred=predict(ridge.mod,s=1e10,newx=x[test,])
 mean((ridge.pred-y.test)^2)
 ridge.pred=predict(ridge.mod,s=0,newx=x[test,],exact=T)
 mean((ridge.pred-y.test)^2)
+######
 lm(y~x, subset=train)
 predict(ridge.mod,s=0,exact=T,type="coefficients")[1:20,]
+######
 set.seed(1)
 cv.out=cv.glmnet(x[train,],y[train],alpha=0)
 plot(cv.out)
