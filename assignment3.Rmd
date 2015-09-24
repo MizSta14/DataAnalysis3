@@ -19,15 +19,17 @@ library(pls)
 library(MASS)
 library(plyr)
 library(dplyr)
+library(gdata)
 ```
 $\blacktriangleright$ \textbf{Exercises 5.8.\quad Solution.} 
 
 
 ```{r, echo=FALSE, cache=TRUE}
-# 9
-set.seed(1)
+# 6.9
 data(College)
-# (a)
+```
+```{r a, echo=FALSE, cache=TRUE}
+# 6.9(a)
 set.seed(1)
 train.ind <- sample(1:nrow(College), nrow(College)/2)
 test.ind <- -train.ind
@@ -131,9 +133,14 @@ M <- as.numeric(gsub("([0-9]+).*$", "\\1", best.pcr.fit))
 ```
 (f). The MSE for PLS model is $`r plsr.mse`$, and $M=`r M`$.
 
-
-(g). $`r sd(College$Apps)^2`$
-
+```{r corr1, cache=TRUE, echo=FALSE, results='hide'}
+College.num <- sapply(College, as.numeric)
+College.cor <- cor(College.num[, 2], College.num[, -2])
+College.cor[1, College.cor[1, ]>0.5]
+```
+(g). Compared to the standard deviation of variables Apps, which is $`r sd(College$Apps)^2`$, the standard errors of five model is not so big, which are at most less than 10% of $sd(Apps)$. So the model the prediction accuracy of the models is good enough. This is not surprising. If we compute the correlation between the variable Apps, and the rest variables (as shown below), there are three variables -- `r names(College.cor[1, College.cor[1, ]>0.5])` -- which have really large cofficients of correlation, so linear model is reasonable choice. Comparing within these five models, ridge regression and lasso regression are about 5%-7% better than the traditional linear regression, while the PCR and PLS are 10% worse than the traditional linear regression. Furthermore, the lasso regression is a little better than the ridge regression, but not so significantly.
+```{r, ref.label="corr1", echo=FALSE, cache=TRUE}
+```
 
 
 
@@ -144,8 +151,8 @@ data(Boston)
 
 $\blacktriangleright$ \textbf{Exercises 2.\quad Solution.} 
 
-```{r, echo=FALSE, cache=TRUE}
-# (a)
+```{r b, echo=FALSE, cache=TRUE}
+# 2. (a)
 set.seed(1)
 train=sample(c(TRUE,FALSE), nrow(Boston),rep=TRUE)
 train.Boston <- Boston[train, ]
@@ -303,11 +310,22 @@ plsr.mse <- mean((plsr.pred - test.Boston$crim)^2)
 ```
 (g). The MSE for PLS model is $`r plsr.mse`$, and $M=`r M`$.
 
+```{r corr2, cache=TRUE, echo=FALSE, results='hide'}
+Boston.num <- sapply(Boston, as.numeric)
+Boston.cor <- cor(Boston.num[, 1], Boston.num[, -1])
+Boston.cor[1, Boston.cor[1, ]>0.4]
+```
+(h). Compared to the standard deviation of variables crim, which is $`r sd(Boston$crim)^2`$, the standart errors of these six models is fairly large, roughly about 80% of $sd(crim)$. They are not much better than predicting the response without any model just by using the distribution of response. The differences between the performance of these models is not apparent, and best model is the linear regression just by using the exhaustive best subset selection. To be noticed, the predictors in the best model is not the variables with top two highest coefficient of correlation. We should think that it probably indicates that there exists some multicollinearity problems in this dataset. Hence, the multicollinearity makes the model selection and shrinkage for linear model difficult, and the small coefficients of correlation worsen this situation.
+```{r, ref.label="corr2", echo=FALSE, cache=TRUE}
+```
 
-(h).
+
+
+
 
 $\blacktriangleright$ \textbf{Exercises 3.\quad Solution.} 
 
+ 
 ```{r, cache=FALSE, echo=FALSE, include=FALSE, cache=TRUE}
 # 3
 if (!file.exists("./forestfires.csv"))
@@ -322,6 +340,7 @@ set.seed(1)
 train=sample(c(TRUE,FALSE), nrow(Data),rep=TRUE)
 train.Data <- Data[train, ]
 test.Data <- Data[!train, ]
+k = 5
 
 # Linear Regression
 
@@ -331,12 +350,13 @@ lm.pred <- predict(lm.fit,
                    test.Data[test.Data$month != "nov", ])
 lm.mse = mean((lm.pred - test.Data$log_area[test.Data$month != "nov"])^2)
 
+
 # Ridge Regression
 set.seed(1)
 ridge.cv.out <- cv.glmnet(x = model.matrix(log_area ~ ., train.Data)[,-1], 
                           y = train.Data$log_area, 
                           alpha = 0,
-                          nfolds = 5)
+                          nfolds = k)
 ridge.bestlam <- ridge.cv.out$lambda.min
 ridge.mod <- glmnet(x = model.matrix(log_area ~ ., train.Data)[,-1], 
                     y = train.Data$log_area, 
@@ -353,7 +373,7 @@ set.seed(1)
 lasso.cv.out <- cv.glmnet(x = model.matrix(log_area ~ ., train.Data)[,-1], 
                           y = train.Data$log_area, 
                           alpha = 1, 
-                          nfolds = 5)
+                          nfolds = k)
 lasso.bestlam <- lasso.cv.out$lambda.min
 lasso.mod <- glmnet(x = model.matrix(log_area ~ ., train.Data)[,-1], 
                     y = train.Data$log_area, 
@@ -362,9 +382,6 @@ lasso.mod <- glmnet(x = model.matrix(log_area ~ ., train.Data)[,-1],
 lasso.pred <- predict(lasso.mod,
                       s = lasso.bestlam,
                       newx = model.matrix(log_area ~ ., test.Data)[,-1])
-lasso.coef <- predict(lasso.mod, 
-                      type = "coefficients", 
-                      s = lasso.bestlam)[1:14,]
 lasso.mse = mean((lasso.pred - test.Data$log_area)^2)
 
 
@@ -373,9 +390,9 @@ lasso.mse = mean((lasso.pred - test.Data$log_area)^2)
 set.seed(1)
 pcr.fit <- pcr(log_area ~ ., 
                data = train.Data[, c(-3, -4)], 
-               scale = FALSE, 
+               scale = TRUE, 
                validation = "CV",
-               segments = 5)
+               segments = k)
 M.ind <- which.min(RMSEP(pcr.fit)$val[1, 1, ])
 best.pcr.fit <- attr(RMSEP(pcr.fit)$val, "dimnames")$model[M.ind]
 M <- as.numeric(gsub("([0-9]+).*$", "\\1", best.pcr.fit))
@@ -388,27 +405,45 @@ pcr.mse = mean((pcr.pred - test.Data$log_area)^2)
 # PLS
 set.seed(1)
 plsr.fit <- plsr(log_area ~ ., 
-                 data = train.Data, 
-                 scale = FALSE, 
+                 data = train.Data[, c(-3, -4)], 
+                 scale = TRUE, 
                  validation = "CV",
-                 segments = 5)
+                 segments = k)
 M.ind <- which.min(RMSEP(plsr.fit)$val[1, 1, ])
 best.plsr.fit <- attr(RMSEP(plsr.fit)$val, "dimnames")$model[M.ind]
 M <- as.numeric(gsub("([0-9]+).*$", "\\1", best.plsr.fit))
 plsr.pred <- predict(plsr.fit, 
-                     model.matrix(log_area ~ ., test.Data[,-1], 
-                                  ncomp = M))
+                     model.matrix(log_area ~ ., test.Data[, c(-3, -4)])[,-1], 
+                     ncomp = M)
 plsr.mse = mean((plsr.pred - test.Data$log_area)^2)
 ```
-```{r, cache=TRUE, echo=plsr.mse}
+
+From the results below, we can see that the standard deviantion of $\log(area+1)$ is $`r stats::sd(Data$log_area)`$, while the least test MSE is `r ridge.mse` of the ridge regression, which has more variation than the data itself. Even though we can say that the best model among these model is the ridge regression based on the CV MSE and the test MSE, but it is very difficult to say it is a useful model, since it has lower accuracy for prediction than just guessing based the distribution itself. Actually, we may think that the linear regression model is not suitable for this data set. To verify it, we can compute the correlations between the response and predictor, and none of the coefficients of correlation is larger than 0.01. Thus, all the predictors we use seem more likely to be noise features. This can be shown in the result of PCR and PLS. The `r NA`s of test MSE of PCR and PLS are not some computing problem, it is just because the best model based on this two shrinkage method is the model with only intercept, which means that none of these variables can explain the variation of response.
+
+On the other hand, it is obviously we need a scaling process before doing PCR and PLS because the ranges of different variables varies so much at a first glance of the summary of the data set. However, this data also has two categorical variable, and it is meaningless to scale the categorical variable of indicator variable. I cannot figure a reasonable to deal with this issue.
+
+There is another issue in this data set which needs to be noticed. The observation is so unbalanced with respect to the time variable, i.e., some months have few observation. This is why we cannot perform a best subset selection for linear regression based on CV. For example, there is only one observation in November in the data set. If the cross-validation put this observation into test set, then there is no observation in November in training set, and model fitting will not estimate the coefficient of the indicator variable for November. Then we will have some problem in predicting the test set using the model because we do not know how to deal with the November indicator variable.
+
+```{r, cache=TRUE, echo=FALSE}
 list("standard deviation of 'log_area'" = sd(Data$log_area),
+     "ridge.cv" = min(ridge.cv.out$cvm), 
+     "lasso.cv" = min(lasso.cv.out$cvm), 
+     "pcr.cv" = min(MSEP(pcr.fit)$val),
+     "plsr.cv" = min(MSEP(plsr.fit)$val),
      "lm.mse" = lm.mse,
      "ridge.mse" = ridge.mse, 
      "lasso.mse" = lasso.mse, 
      "pcr.mse" = pcr.mse,
      "plsr.mse" = plsr.mse)
+Data.num <- sapply(Data, as.numeric)
+Data.cor <- cor(Data.num[, 13], Data.num[, -13])
+Correlations <- Data.cor[1, ]
 ```
-<!-- # Appendix -->
+```{r, cache=TRUE}
+Correlations
+```
 
-```{r, ref.label=knitr::all_labels(), eval=FALSE, cache=FALSE, echo=FALSE}
+# Appendix 
+
+```{r, ref.label=c("a", "b"), eval=FALSE, cache=FALSE}
 ```

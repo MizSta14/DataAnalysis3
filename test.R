@@ -149,7 +149,7 @@ for(j in 1:k){
                 pred <- predict(best.fit,
                                 train.Boston[folds == j, ], 
                                 id = i)
-                cv.errors[j,i] <- mean( ( train.Boston$crim[folds == j] - pred )^2 )
+                cv.errors[j,i] <- mean((train.Boston$crim[folds == j] - pred)^2)
         }
 }
 mean.cv.errors <- apply(cv.errors, 2, mean)
@@ -157,10 +157,17 @@ best.ind <- which.min(mean.cv.errors)
 reg.best=regsubsets(crim ~ . , 
                     data=train.Boston, 
                     nvmax=13)
+best.lm <- lm(as.formula(paste("crim ~ ", 
+                               paste(attr(coef(reg.best, best.ind), 
+                                          "names")[-1], 
+                                     collapse = " + "))), 
+              data = train.Boston)
+best.predict <- predict(best.lm, 
+                        newdata = train.Boston)
 list("Number of Variables" = length(coef(reg.best, best.ind)), 
      "Name of Variables" = attr(coef(reg.best, best.ind), "names"), 
      "Coefficients of Variables" = coef(reg.best, best.ind),
-     "MSE" = min(mean.cv.errors))
+     "MSE" = mean((best.pred - test.Boston$crim)^2)))
 
 
 # (d).
@@ -294,8 +301,8 @@ list("Lambda" = lasso.bestlam,
 
 set.seed(1)
 pcr.fit <- pcr(log_area ~ ., 
-               data = train.Data[, c(-3, -4)], 
-               scale = TRUE, 
+               data = train.Data, 
+               scale = FALSE, 
                validation = "CV")
 validationplot(pcr.fit, 
                val.type = "MSEP")
@@ -303,7 +310,7 @@ M.ind <- which.min(RMSEP(pcr.fit)$val[1, 1, ])
 best.pcr.fit <- attr(RMSEP(pcr.fit)$val, "dimnames")$model[M.ind]
 M <- as.numeric(gsub("([0-9]+).*$", "\\1", best.pcr.fit))
 pcr.pred <- predict(pcr.fit, 
-                    model.matrix(log_area ~ ., test.Data[, c(-3, -4)])[, -1], 
+                    model.matrix(log_area ~ ., test.Data)[, -1], 
                     ncomp = M)
 mean((pcr.pred - test.Data$log_area)^2)
 
