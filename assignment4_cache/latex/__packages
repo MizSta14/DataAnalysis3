@@ -1,0 +1,17 @@
+base
+ISLR
+ggplot2
+foreach
+gam
+akima
+MASS
+plyr
+dplyr
+gdata
+boot
+leaps
+nlme
+mgcv
+gamclass
+Matrix
+glmnet
