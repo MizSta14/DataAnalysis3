@@ -408,11 +408,11 @@ cat("The best span is: ",
 $\blacktriangleright$ \textbf{Exercises 3.\quad Solution.} 
 
 
-For this problem, I actually have two way to select the good GAM. For we can fit the GAM with all predictor, i.e.
+For this problem, I actually have two way to select the good GAM. For we can firstly try to fit the GAM with all predictor, i.e.
 $$
 PAGES=\beta_0+\beta_1f_1(COUNT~LINERS)+\beta_1f_2(INCHES~LINERS)+\beta_1f_3(LINES~DISPLAY)
 $$
-
+and get the sequential plots of approximate curves of different predictors. Then we can see that the variable "count linears" is actually completely linear, which efficient degree equals 1, the variable "inches linears" is totally nonlinear with very high variance, which efficient degree equals 6.75, and the variable "lines display" is almost linear with only 1.45 degree, but we don't want treat it as linear in case of omitting some information. Then we use 5 fold cross-validation for 7 candidate models, which each predictor will be included or not, but at least one in. Finally we get the "best" model stated as below. 
 
 ```{r, echo = FALSE}
 # 3
@@ -482,11 +482,11 @@ best.model.form <- formula(
 best.gam.fit.1 <- gam(best.model.form, 
                       data = pages)
 ```
+```{r, echo=FALSE}
+cat("The BEST model is: ", as.character(best.model.form)[c(2,1,3)], "; associating with error: ", least.gam.cv)
+```
 
-
-
-
-
+The other way is that we will treat all of them as smooth spline, instead of considering the linearity of each variable, since straight line is just a special case of smooth spline which has very large smooth parameter. Again, we use 5 fold cross-validation for 7 candidate models, the result is
 
 
 
@@ -526,18 +526,21 @@ linear.gam.fit <- gam(PAGES ~ COUNT_LINERS +
                       INCHES_LINERS + 
                       LINES_DISPLAY, 
               data = pages)
+```
+```{r, echo=FALSE}
+cat("The BEST model is: ", as.character(best.model.form)[c(2,1,3)], "; associating with error: ", least.gam.cv)
+```
+The results are exactly same, which indicates that these two way is essentially identical.
+
+Furthermore, to compare with the linear model, maybe we can perform some anova test,
+```{r}
 anova(linear.gam.fit, best.gam.fit.1, best.gam.fit.2, test="F")
+```
+That is to say, the GAM model is significantly more useful compared to multiple linear regression.
 
+$\blacktriangleright$ \textbf{Exercises 4.\quad Solution.} 
 
-
-
-
-
-
-
-
-
-
+```{r, echo = FALSE, results='hide', include=FALSE, cache=FALSE}
 # 4
 if (!file.exists("./lmr_levee.dat"))
         download.file(url = "http://www.stat.ufl.edu/~winner/data/lmr_levee.dat", 
@@ -609,10 +612,10 @@ cv.gam.bin <- function(formula, data, nfold, response, seed.no = 1){
                        replace = TRUE)
         cv.errors <- numeric(nfold)
         for(i in 1:nfold){
-                gam.fit <- mgcv::gam(formula, 
+                gam.fit <- gam(formula, 
                                      data = data[fold.no != i, ], 
                                      family = "binomial")
-                pred <- mgcv::predict.gam(object = gam.fit,
+                pred <- predict.gam(object = gam.fit,
                                           newdata = data[fold.no == i, ])
                 cv.errors[i] <- mean((data[fold.no == i,response] != (pred>0.5)),
                                      na.rm = TRUE)
@@ -620,6 +623,9 @@ cv.gam.bin <- function(formula, data, nfold, response, seed.no = 1){
         cv.error <- mean(cv.errors)
         list(cv.error, cv.errors)
 }
+
+
+
 model.no <- expand.grid(c(TRUE, FALSE),
                         c(TRUE, FALSE), 
                         c(TRUE, FALSE))
@@ -640,11 +646,28 @@ gam.formula <- as.formula(paste("Failure1~",
                                       ")",
                                       collapse = "+", 
                                       sep = "")))
-
-
-
-
 detach(Data)
+```
+This problem is kind of a scientific problem, so the prediction is not the only thing we want get, but also the inferences and interpretations of predictors. So the usage of GAM seems to be very reasonable, because we can make inferences based on the structure of GAM. I firstly perform some simple linear regressions for the response on each variable, and get the p-value of each regressions, which should be the biggest significance for every variable.
+```{r}
+p.values
+```
+Based on the p-values, I keep some predictors --`r predictors` -- for training. Like in problem 3, we still use cross validation to select the best model of 7 candidate models. The difference is that the cost function we need to minimize here is the error. So, the best model should have the smallest validation error rate.
+```{r}
+gam.formula
+cvmse[i]
+```
+It is a little surprising, since the best model only contains one variables, furthermore, we did not imagine that the best predictor is sinuosity among there candidate in our common sense. But the performance of this model is still not so good since it has almost 40% error rate. 
+
+
+
+
+
+
+
+$\blacktriangleright$ \textbf{Exercises 4.\quad Solution.} 
+
+```{r, echo = FALSE, results='hide', include=FALSE, cache=FALSE}
 
 # 5
 if (!file.exists("./forestfires.csv"))
@@ -699,10 +722,34 @@ cv.mse[9] <- CVgam(log_area ~ s(X,Y) + s(DC) + s(ISI),
                    data = Data, 
                    nfold = 5)[[3]]
 cv.mse[10] <- CVgam(log_area ~ s(X,Y) + s(DC) + s(RH), 
-                   data = Data, 
-                   nfold = 5)[[3]]
+                    data = Data, 
+                    nfold = 5)[[3]]
+gam.fit <- gam(log_area ~ s(X,Y) + s(DC) + s(RH), 
+               data = Data)
+
 ```
 
+The best model I got is "log_area ~ s(X,Y) + s(DC) + s(RH)", and the smoothing parameters is 
+```{r}
+gam.fit$sp
+```
+
+The considerable smoothing parameters for DC and RH indicates that they are linear. But the location variable have very large degree, which more than 18. We verify these from the plots.
+
+```{r, echo=FALSE}
+par(mfrow = c(3, 1), 
+    mar = c(1, 4, 1, 1))
+plot(gam.fit)
+par(mfrow = c(1, 1))
+```
+
+The CV is
+```{r}
+summary(gam.fit)$sp.criterion
+```
+
+The best model in HW3 is the ridge model with regularization parameter $\lambda=`r ridge.bestlam`$, associated with 
+$MSE_{CV}=`r  min(ridge.cv.out$cvm)`$.
 
 
 
