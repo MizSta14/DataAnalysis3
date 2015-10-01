@@ -12,7 +12,6 @@ setwd("~/Documents/git/DataAnalysis3")
 rm(list = ls())
 library(ISLR)
 library(ggplot2)
-library(gam)
 library(akima)
 library(splines)
 library(MASS)
@@ -27,7 +26,8 @@ library(glmnet)
 par(mfrow = c(1, 1))
 folds <- 10
 ```
-$\blacktriangleright$ \textbf{Exercises 7.1.\quad Solution.} 
+
+$\blacktriangleright$ \textbf{Exercises 2.\quad Solution.} 
 
 (a). For all $x\leq\xi$, $(x-\xi)^2_+=0$, then
 $$
@@ -105,7 +105,7 @@ $\blacktriangleright$ \textbf{Exercises 7.1.\quad Solution.}
 attach(Boston)
 ```
 
-```{r, echo = FALSE, results='hide', include=FALSE, cache=TRUE}
+```{r, echo = FALSE, results='hide', include=FALSE, cache=FALSE}
 poly.fit <- lm(nox ~ poly(dis, degree = 3, raw = TRUE), 
                data = Boston)
 summary(poly.fit)
@@ -115,7 +115,7 @@ preds <- predict(poly.fit, newdata = list(dis = dis.grid), se = T)
 se.bands=cbind(preds$fit+2*preds$se.fit,preds$fit-2*preds$se.fit)
 ```
 (a).
-```{r, cache=TRUE,fig.align='center', echo=FALSE, fig.width=6, fig.height=4}
+```{r, cache=FALSE,fig.align='center', echo=FALSE, fig.width=6, fig.height=4}
 plot(dis, 
      nox, 
      xlim=dislims, 
@@ -136,7 +136,7 @@ matlines(dis.grid,
 (b). From the plots we can see that all fitted curves are similar within the range of data, while high order curves seem much more wiggle when they come to the out of the bonudary of data. It is no surprising that the highest order polynomial has the lowest residual sum of square since we did not apply any smoothing or regularization method on this approximation.
 
 
-```{r, echo = FALSE, cache=TRUE}
+```{r, echo = FALSE, cache=FALSE}
 # (b). 
 max.degree <- 10
 RSS <- numeric(max.degree)
@@ -173,7 +173,7 @@ for (ind in 1:max.degree){
         
 }
 ```
-```{r, cache=TRUE, echo=FALSE}
+```{r, cache=FALSE, echo=FALSE}
 for (ind in 1:max.degree){
         print(paste("RSS for Degree -", 
                     ind, 
@@ -185,7 +185,7 @@ par(mfrow = c(1, 1))
 ```
 
 
-```{r, echo = FALSE, cache=TRUE}
+```{r, echo = FALSE, cache=FALSE}
 # (c)
 set.seed(1)
 cv.error <- numeric(max.degree)
@@ -206,13 +206,15 @@ best.model <- paste(names(least.cv.error), "Polynomial Regression")
 cv.error
 ```
 
-So the best mode is the `r best.model` with CV error $`r least.cv.error`$. It is a little that the `r best.model` is still not overfitting based on cross-validation. Actually, this result highly depends on the seed of random number. The best model above is selected based on seed=1, but if we change the seed to 5, then the best model will be `r paste(names(cv.error[5]), "Polynomial Regression")`. So to be careful, maybe we should consider the model based on one standard rule as a better model since it is usually more stable.
+So the best mode is the `r best.model` with CV error $`r least.cv.error`$. It is a little that the `r best.model` is still not overfitting based on cross-validation. Actually, this result highly depends on the seed of random number. The best model above is selected based on seed=1, but if we change the seed to 5, then the best model will be `r paste(names(cv.error[5]), "Polynomial Regression")`. One way to solve this problem is to consider the model based on one standard rule as a better model since it is usually more stable.
+
+Another way is to perform this cross-validation multiple times with different, then we will choose the model which is most probablyt to have the least CV mse. I try from seed 1 to seed 100, and the results shows that `r paste(names(cv.error[9]), "Polynomial Regression")` should be the best model.
 
 
 
 
 
-```{r, echo = FALSE, results='hide', include=FALSE, cache=TRUE}
+```{r, echo = FALSE, cache=FALSE, include=FALSE}
 # (d)
 min.spline.degree <- 3
 max.spline.degree <- 6
@@ -235,11 +237,27 @@ for (df.spline in min.spline.degree:max.spline.degree){
         attr(cv.rss, "names")[df.spline -min.spline.degree + 1] <- 
                 paste("Degree -", df.spline)
 }
+```
+
+
+(d).
+```{r, echo = FALSE, cache=FALSE, fig.width=5, fig.align='center', fig.height=3.5}
+
 best.model.no <- which.min(cv.rss)
 least.cv.rss <- cv.rss[best.model.no]
 best.model <- paste(names(least.cv.rss), "Spline Regression")
-cv <- rbind(cv, cbind(i,matrix(cv.rss, nrow = 1, dimnames = list(NULL, 
+cv <- rbind(cv, cbind(i,matrix(cv.rss, nrow = 1, dimnames = list(NULL,
                                                                  names(cv.rss)))))
+cat("The best model is: ", 
+    best.model,
+    ";\n", 
+    "associated degree of freedom: ", 
+    best.model.no + 2, 
+    ";\n", 
+    "associated RSS: ", 
+    least.cv.rss,
+    ".\n",
+    "The plot is shown below")
 # }
 bs.pred <- predict(object = bs.models[[best.model.no]], 
                    list(dis = dis.grid))
@@ -259,8 +277,13 @@ plot(dis,
 lines(dis.grid, 
       bs.pred,
       lwd = 2)
+```
 
 
+
+
+
+```{r, echo = FALSE, results='hide', include=FALSE, cache=FALSE}
 
 # (e)
 min.spline.degree <- 3
@@ -283,12 +306,27 @@ for (df.spline in min.spline.degree:max.spline.degree){
         attr(cv.ns.rss, "names")[df.spline -min.spline.degree + 1] <- 
                 paste("Degree -", df.spline)
 }
+```
+
+(e). 
+
+```{r, echo = FALSE, cache=FALSE, fig.width=5, fig.align='center', fig.height=3.5}
+
 best.model.no <- which.min(cv.ns.rss)
 least.cv.ns.rss <- cv.ns.rss[best.model.no]
 best.model <- paste(names(least.cv.ns.rss), "Spline Regression")
 cv.ns <- rbind(cv.ns, cbind(i,matrix(cv.ns.rss, nrow = 1, dimnames = list(NULL, 
                                                                           names(cv.ns.rss)))))
-
+cat("The best model is: ", 
+    best.model,
+    ";\n", 
+    "associated degree of freedom: ", 
+    best.model.no + 2, 
+    ";\n", 
+    "associated RSS: ", 
+    least.cv.rss,
+    ".\n",
+    "The plot is shown below")
 ns.pred <- predict(object = ns.models[[best.model.no]], 
                    list(dis = dis.grid))
 par(mfrow = c(1, 1))
@@ -307,14 +345,29 @@ plot(dis,
 lines(dis.grid, 
       ns.pred,
       lwd = 2)
+```
 
 
+
+```{r, echo = FALSE, results='hide', include=FALSE, cache=FALSE}
 # (f)
 
 ss.fit=smooth.spline(nox ,dis, cv = T)
 smoothing.level <- ss.fit$lambda
+```
+
+(f). Since the funtion "smooth.spline" can automatically optimize the smoothing parameter by setting the option "cv = TRUE", so we can directly get the smoothing level from the value of "lambda" in object of "smooth.spline" class. Thus, the smoothing level of smooth spline model is 
+```{r, cache=FALSE}
+ss.fit$lambda
+```
 
 
+
+
+
+
+
+```{r, echo = FALSE, results='hide', include=FALSE, cache=FALSE}
 # (g)
 set.seed(1)
 spans <- seq(0.2, 0.8, 0.01)
@@ -341,9 +394,27 @@ best.loess.no <- which.min(mean.cv.errors)
 least.loess.cv <- mean.cv.errors[best.loess.no]
 best.span <- as.numeric(names(least.loess.cv))
 detach(Boston)
+```
+
+(g). Fitting the loess and perform cross-validation should be more careful, because there must be one training sample which does not contain the largest observation, and also one training sample which does not contain the smallest observation (it will very possible that they are in the same test sample), then we will get an error about data out of boundary. I just ignore this single abnormal observation by setting "na.rm = TRUE". Then I still use 10-fold cross validation to choose the best span and the result is
+```{r}
+cat("The best span is: ", 
+    best.span,
+    "associated MSE: ", 
+    least.loess.cv)
+```
 
 
+$\blacktriangleright$ \textbf{Exercises 3.\quad Solution.} 
 
+
+For this problem, I actually have two way to select the good GAM. For we can fit the GAM with all predictor, i.e.
+$$
+PAGES=\beta_0+\beta_1f_1(COUNT~LINERS)+\beta_1f_2(INCHES~LINERS)+\beta_1f_3(LINES~DISPLAY)
+$$
+
+
+```{r, echo = FALSE}
 # 3
 if (!file.exists("./pages.dat"))
         download.file(url = "http://files.figshare.com/2290841/pages.dat", 
@@ -362,110 +433,109 @@ fold.no=sample(1:folds,
                replace = TRUE)
 cv.errors <- matrix(NA, 
                     folds, 
-                    3^3-1, 
-                    dimnames=list(NULL, paste(1:(3^3-1))))
-forms <- expand.grid(c("I", "lo", "s"), 
-                     c("I", "lo", "s"), 
-                     c("I", "lo", "s"))
-for(j in 1:26){
-        formula.fit <- formula(paste("PAGES ~ ", 
-                                     forms[j, 1], 
-                                     "(COUNT_LINERS) + ", 
-                                     forms[j, 2], 
-                                     "(INCHES_LINERS) + ",
-                                     forms[j, 3], 
-                                     "(LINES_DISPLAY)", 
-                                     collapse = ""))
+                    7, 
+                    dimnames=list(NULL, paste(1:7)))
+forms <- expand.grid(c(FALSE), 
+                     c(FALSE), 
+                     c(TRUE, FALSE), 
+                     c(TRUE, FALSE), 
+                     c(TRUE, FALSE))
+s <- mgcv:::s
+gam <- mgcv::gam
+gam.try <- gam(PAGES ~ s(COUNT_LINERS) + 
+                       s(INCHES_LINERS) + 
+                       s(LINES_DISPLAY), 
+               data = pages)
+par(mfrow = c(1, 3),
+    mar = c(5, 5, 5, 1))
+plot(gam.try)
+par(mfrow = c(1, 1))
+```
+```{r, echo = FALSE, results='hide', include=FALSE, cache=FALSE}
+# method 1
+regressors <- c("DATE",
+                "PAGES",
+                "COUNT_LINERS", 
+                "s(INCHES_LINERS)", 
+                "s(LINES_DISPLAY)")
+for(j in 1:7){
+        formula.fit <- formula(
+                paste("PAGES ~ ", 
+                      paste(paste(regressors[as.logical(forms[j,])]), 
+                            collapse = "+")))
         for(i in 1:folds){
-                gam.fit=mgcv::gam(formula.fit, 
-                                  data = pages[fold.no != i, ])
+                gam.fit=gam(formula.fit, 
+                                 data = pages[fold.no != i, ])
                 pred <- mgcv::predict.gam(object = gam.fit,
-                                      newdata = pages[fold.no == i, ])
+                                         newdata = pages[fold.no == i, ])
                 cv.errors[i,j] <- mean((pages$PAGES[fold.no == i] - pred)^2,
                                        na.rm = TRUE)
         }
 }
 mean.cv.errors <- apply(cv.errors, 2, mean)
 best.gam.no <- which.min(mean.cv.errors)
-least.gam.cv <- mean.cv.errors[best.loess.no]
+least.gam.cv <- mean.cv.errors[best.gam.no]
+best.model.form <- formula(
+        paste("PAGES ~ ", 
+              paste(paste(regressors[as.logical(forms[best.gam.no,])]), 
+                    collapse = "+")))
+best.gam.fit.1 <- gam(best.model.form, 
+                      data = pages)
+```
+
+
+
+
+
+
+
+
+```{r, echo = FALSE, results='hide', include=FALSE, cache=FALSE}
+# method 2
+set.seed(5)
+for(j in 2:7){
+        formula.fit <- formula(paste("PAGES ~ ", 
+                                     paste(
+                                             paste("s(",
+                                                   names(pages)[as.logical(forms[j,])],
+                                                   ")", 
+                                                   sep = ""), 
+                                             collapse = "+")))
+        for(i in 1:folds){
+                gam.fit=gam(formula.fit, 
+                                 data = pages[fold.no != i, ])
+                pred <- mgcv::predict.gam(object = gam.fit,
+                                         newdata = pages[fold.no == i, ])
+                cv.errors[i,j] <- mean((pages$PAGES[fold.no == i] - pred)^2,
+                                       na.rm = TRUE)
+        }
+}
+mean.cv.errors <- apply(cv.errors, 2, mean)
+best.gam.no <- which.min(mean.cv.errors)
+least.gam.cv <- mean.cv.errors[best.gam.no]
 best.model.form <- formula(paste("PAGES ~ ", 
-                                 forms[best.loess.no, 1], 
-                                 "(COUNT_LINERS) + ", 
-                                 forms[best.loess.no, 2], 
-                                 "(INCHES_LINERS) + ",
-                                 forms[best.loess.no, 3], 
-                                 "(LINES_DISPLAY)", 
-                                 collapse = ""))
-linear.gam.model <- formula(paste("PAGES ~ ", 
-                                  forms[1, 1], 
-                                  "(COUNT_LINERS) + ", 
-                                  forms[1, 2], 
-                                  "(INCHES_LINERS) + ",
-                                  forms[1, 3], 
-                                  "(LINES_DISPLAY)", 
-                                  collapse = ""))
-best.gam.fit=mgcv::gam(best.model.form, 
-                       data = pages)
-linear.gam.fit=mgcv::gam(linear.gam.model, 
-                         data = pages)
-cllims <- range(`COUNT_LINERS`)
-illims <- range(`INCHES_LINERS`)
-ldlims <- range(`LINES_DISPLAY`)
-cl.grid <- seq(from = cllims[1], 
-               to = cllims[2], 
-               by = (cllims[2] - cllims[1])/100 )
-il.grid <- seq(from = illims[1], 
-               to = illims[2], 
-               by = (illims[2] - illims[1])/100 )
-ld.grid <- seq(from = ldlims[1], 
-               to = ldlims[2], 
-               by = (ldlims[2] - ldlims[1])/100 )
-pages.grid <- expand.grid(`COUNT_LINERS` = cl.grid, 
-                          `INCHES_LINERS` = il.grid, 
-                          `LINES_DISPLAY` = ld.grid)
-preds <- mgcv::predict.gam(best.gam.fit, newdata = pages.grid)
-anova(linear.gam.fit, best.gam.fit, test="F")
+                                 paste(
+                                         paste("s(",
+                                               names(pages)[as.logical(forms[best.gam.no,])],
+                                               ")", 
+                                               sep = ""), 
+                                         collapse = "+")))
+best.gam.fit.2 <- gam(best.model.form, 
+                      data = pages)
+linear.gam.fit <- gam(PAGES ~ COUNT_LINERS + 
+                      INCHES_LINERS + 
+                      LINES_DISPLAY, 
+              data = pages)
+anova(linear.gam.fit, best.gam.fit.1, best.gam.fit.2, test="F")
 
 
-# predict.regsubsets <- function(object,newdata,id,...){
-#         form <- as.formula(object$call[[2]])
-#         mat <- model.matrix(form,newdata)
-#         coefi <- coef(object, id = id)
-#         xvars <- names(coefi)
-#         mat[, xvars]%*%coefi
-# }
-# set.seed(1)
-# fold.no=sample(1:folds, 
-#              nrow(pages), 
-#              replace = TRUE)
-# cv.errors <- matrix(NA, 
-#                     folds, 
-#                     3, 
-#                     dimnames=list(NULL, paste(1:3)))
-# for(j in 1:folds){
-#         best.fit <- regsubsets(PAGES ~ .,
-#                                data=pages[fold.no != j, ],
-#                                nvmax=3)
-#         for(i in 1:3){
-#                 pred <- predict(best.fit,
-#                                 pages[fold.no == j, ], 
-#                                 id = i)
-#                 cv.errors[j,i] <- mean((pages$PAGES[fold.no == j] - pred)^2)
-#         }
-# }
-# mean.cv.errors <- apply(cv.errors, 2, mean)
-# best.ind <- which.min(mean.cv.errors)
-# reg.best <- regsubsets(PAGES ~ . , 
-#                        data=pages, 
-#                        nvmax=3)
-# best.formula <- as.formula(paste("PAGES ~ ", 
-#                                  paste(attr(coef(reg.best, best.ind), 
-#                                             "names")[-1], 
-#                                        collapse = " + ")))
-# best.lm <- lm(best.formula, 
-#               data = pages)
-# best.pred <- predict(best.lm, 
-#                      newdata = pages)
+
+
+
+
+
+
+
 
 
 # 4

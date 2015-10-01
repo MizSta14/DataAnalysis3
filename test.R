@@ -82,18 +82,22 @@ for (ind in 1:max.degree){
 
 
 # (c)
-set.seed(1)
-cv.error <- numeric(max.degree)
-for (i in 1:max.degree){
-        cv.error[i] <- cv.glm(data = Boston, 
-                              glmfit = models[[i]], 
-                              K = folds)$delta[1]
-        attr(cv.error, "names")[i] <- paste("Degree -", i)
+best.model <- rep("s", 10)
+least.cv.error <- numeric(10)
+best.model.no <- numeric(10)
+for (k in 1:10){
+        set.seed(k)
+        cv.error <- numeric(max.degree)
+        for (i in 1:max.degree){
+                cv.error[i] <- cv.glm(data = Boston, 
+                                      glmfit = models[[i]], 
+                                      K = folds)$delta[1]
+                attr(cv.error, "names")[i] <- paste("Degree -", i)
+        }
+        best.model.no[k] <- which.min(cv.error)
+        least.cv.error[k] <- cv.error[best.model.no[k]]
+        best.model[k] <- paste(names(cv.error[best.model.no[k]]), "Polynomial Regression")
 }
-best.model.no <- which.min(cv.error)
-least.cv.error <- cv.error[best.model.no]
-best.model <- paste(names(least.cv.error), "Polynomial Regression")
-
 
 # (d)
 min.spline.degree <- 3
