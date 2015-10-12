@@ -1,3 +1,13 @@
+---
+title: "STAT 8330 FALL 2015 ASSIGNMENT 5"
+author: "Peng Shao"
+date: "October 8, 2015"
+output: 
+        pdf_document:
+                includes:
+                        in_header: mystyles3.sty
+---
+```{r environ, echo = FALSE, include=FALSE}
 setwd("~/Documents/git/DataAnalysis3")
 rm(list = ls())
 library(tree)
@@ -9,10 +19,14 @@ library(gbm)
 library(earth)
 library(mda)
 library(plotmo)
+
+
 par(mfrow = c(1, 1))
 folds <- 10
+```
+$\blacktriangleright$ \textbf{Exercises 8.3.\quad Solution.} 
 
-#1
+```{r, cache=TRUE}
 p <- seq(0, 1, 0.01)
 error <- 1-apply(cbind(p, 1 - p), 1, max)
 gini <- 2*p*(1 - p)
@@ -29,12 +43,25 @@ legend(0.8, 1,
        lty=c(1, 2, 3), 
        col = c("black", "red", "blue"), 
        cex = .7)
+```
 
-#2
+$\blacktriangleright$ \textbf{Exercises 8.5.\quad Solution.} 
+
+```{r}
 probs <- c(0.1, 0.15, 0.2, 0.2, 0.55, 0.6, 0.6, 0.65, 0.7, 0.75)
-vote <- ifelse(sum(probs > 0.5) > length(probs)/2, TRUE, FALSE)
-average <- ifelse(mean(probs) > 0.5, TRUE, FALSE)
+vote <- ifelse(sum(probs > 0.5) > length(probs)/2, "RED", "NOT RED")
+average <- ifelse(mean(probs) > 0.5,"RED", "NOT RED")
+```
+For the majority vote approach, the result is 
+```{r}
+vote
+```
+And for average probability approach, the result is 
+```{r}
+average
+```
 
+```{r, echo=FALSE, include=FALSE, results='hide'}
 #3
 set.seed(1)
 train_size <- 200
@@ -51,7 +78,7 @@ summary(tree_carseats)
 plot(tree_carseats)
 text(tree_carseats,
      pretty = 0, 
-     cex = .7)
+     cex = 0.7)
 tree_test_mse <- mean((tree_pred - carseats_test$Sales)^2)
 
 #(b)
@@ -120,7 +147,7 @@ for (i in 1:length(B)){
 working_time <- proc.time() - ptm
 Best_B <- as.numeric(dimnames(boost_cv_mse)[[1]][which(boost_cv_mse == min(boost_cv_mse), arr.ind = TRUE)[1, 1]])
 Best_d <- as.numeric(dimnames(boost_cv_mse)[[2]][which(boost_cv_mse == min(boost_cv_mse), arr.ind = TRUE)[1, 2]])
-Best_lambda <- Best.B <- as.numeric(dimnames(boost_cv_mse)[[3]][which(boost_cv_mse == min(boost_cv_mse), arr.ind = TRUE)[1, 3]])
+Best_lambda <- as.numeric(dimnames(boost_cv_mse)[[3]][which(boost_cv_mse == min(boost_cv_mse), arr.ind = TRUE)[1, 3]])
 boost_carseats <- gbm(Sales ~ ., 
                       data = carseats_train, 
                       distribution = "gaussian", 
@@ -136,14 +163,11 @@ boost_mse <- mean((boost_pred - carseats_test$Sales)^2)
 max_m <- ncol(Carseats) - 1
 rf_mse <- numeric(max_m)
 names(rf_mse) <- 1:max_m
-rf_importances <- rep(list(matrix(NA, 10, 2)), max_m)
-names(rf_importances) <- 1:max_m
 for (i in 1:max_m){
         rf_carseats <- randomForest(Sales ~ ., 
                                     data = carseats_train, 
                                     mtry = i, 
                                     importance = TRUE)
-        rf_importances[[i]] <- importance(rf_carseats)
         rf_pred = predict(rf_carseats, 
                           newdata = carseats_test)
         rf_mse[i] <- mean((rf_pred-carseats_test$Sales)^2)
@@ -157,8 +181,117 @@ mars_carseats <- earth(Sales ~ .,
 mars_pred <- predict(mars_carseats, 
                      newdata = carseats_test)
 mars_mse <- mean((mars_pred-carseats_test$Sales)^2)
+```
 
 
+
+$\blacktriangleright$ \textbf{Exercises 3.\quad Solution.} 
+I set the seed(1) at the beginning of problem 3, and I will not reset it again within this problem.
+
+(a). This dataset has 10 candidate predictors, but the regression tree only use six of them, which are
+```{r}
+as.character(summary(tree_carseats)$used)
+```
+The regression tree is 
+```{r}
+plot(tree_carseats)
+text(tree_carseats,
+     pretty = 0, 
+     cex = 0.5)
+```
+ 
+We can get some knowledge fron the tree: 1) good quality of the shelving location for the car seats will result in high sales; 2) lower price and higher competitor price will result in higher sales; 3) the site with younger local population will have higher sales; 4) the more advertisement, the more sales; 5) the richer people are, the more they will buy child car seats. So, the good quality with very low price (less than 113) has the highest sales. Actually, these findings seem not so surprising and they are very reasonable. 
+
+The test MSE of this tree is $`r tree_test_mse`$.
+
+(b). Using 10 fold cross-validation, the optimal level of tree complexity is
+```{r}
+summary(prune_carseats)$size
+```
+And the test MSE of pruned tree is $`r prune_test_mse`$. We can see it does not improve the test MSE.
+
+
+(c). The test MSE of bagging is `r bag_test_mse`. The importances are shown below
+```{r}
+importance(bag_carseats)
+varImpPlot(bag_carseats, main = "Importance Plot")
+```
+Thus, the most important variables are `r important_var`.
+
+(d). Since this is a regression tree problem, so the distribution options should be `distribution = "gaussian"`, and I use `r folds` fold cross-validaiton to choose the best the parameteres from the candidate combinations:
+
+* $B\in\{1000, 2000, 3000, 4000, 5000\}$;
+* $d\in\{1, 2, 3, 4\}$;
+* $\lambda\in\{0.01, 0.1\}$.
+
+Then the best result from the program is 
+```{r}
+Best_B
+Best_d
+Best_lambda
+```
+
+That is the best "n.trees" is `r Best_B`, and the best "interaction.depth" is `r Best_d`. The associated MSE is $`r round(boost_mse, 4)`$.
+
+(e) Usually, we have some suggestions like $m=\sqrt(p), \frac{\sqrt{p}}{2}, 2\sqrt{p}$ or $\frac{p}{3}$ when we have large number features, to reduce the dimensionality. Here we only have 10 features so we can try every possible value of $m$. The plot of MSE v.s the value of $m$ is 
+
+```{r, echo=FALSE}
+plot(rf_mse, 
+     main = "The relation between MSE and m", 
+     type = "b", 
+     xlab = "m", 
+     ylab = "MSE")
+```
+
+So we can see that the best forest with lowerest MSE -- which is `r round(min(rf_mse), 4)` -- uses all features instead of choosing some of them, which may probabily indicates that in such low dimensional problem, we do not need to do some pruning work to void overfitting. Another good result we can get is that, no matter what $m$ is, the most important varibles are always "`r important_var[1]`" and "`r important_var[2]`".
+
+(f). Using the function `earth()` in the library `earth`, we can select the best model from 10-fold GCV based cross-validation by the following code,
+
+```{r, eval=FALSE}
+mars_carseats <- earth(Sales ~ ., 
+                       data = carseats_train, 
+                       pmethod = "cv", 
+                       nfold = 10)
+```
+
+And the best model is 
+```{r}
+summary(mars_carseats)
+```
+with $\text{GCV}=`r mars_carseats$gcv`$ and $\text{test MSE}=`r mars_mse`$.
+
+Here, the basis functions are 
+```{r}
+dimnames(mars_carseats$cuts)[[1]][mars_carseats$selected.terms]
+```
+```{r, echo=FALSE}
+mars_carseats <- earth(Sales ~ ., 
+                       data = carseats_train, 
+                       pmethod = "cv", 
+                       nfold = 10, 
+                       degree = 2)
+mars_pred <- predict(mars_carseats, 
+                     newdata = carseats_test)
+mars_mse2 <- mean((mars_pred-carseats_test$Sales)^2)
+mars_carseats <- earth(Sales ~ ., 
+                       data = carseats_train, 
+                       pmethod = "cv", 
+                       nfold = 10, 
+                       degree = 3)
+mars_pred <- predict(mars_carseats, 
+                     newdata = carseats_test)
+mars_mse3 <- mean((mars_pred-carseats_test$Sales)^2)
+```
+
+Comparing these to the predictors we got in part (a), we can easily find that they are identical, while the cut-off of each predictor is slightly different. To be noticed, the MARS which I use here is additive model by set the function option `degree = 1`, which controls the maximum degree of interaction. If we allow the model include interaction terms, we can get of the test MSE of the best model with second order interactions, which is `r round(mars_mse2, 4)`, and the that with with order interactions, which is `r round(mars_mse3, 4)`. We can see that both of them is greater than the test MSE of additive model, so the interactions may result in overfitting.
+
+
+
+
+
+
+
+```{r, echo=FALSE, include=FALSE, results='hide'}
 #4
 set.seed(1)
 
@@ -280,4 +413,36 @@ all_error_rate <- c(tree_test_mse,
                     boost_test_mse, 
                     rf_test_mse, 
                     mars_test_mse)
+names(all_error_rate) <- c("Simple Tree",
+                           "Tree with bagging", 
+                           "Tree with boostin", 
+                           "Tree with random forest", 
+                           "MARS")
+```
+
+
+$\blacktriangleright$ \textbf{Exercises 4.\quad Solution.} 
+
+Firsly, this is a classification tree proble, so the cost function should be the error rate. Then the information in the analysis are:
+
+* random seed is 1;
+* folds of cross-validation is `r folds`;
+* for simple classification, the result is the best model after pruning;
+* for bagging, B (which is the number of trees) is 500, the default value of funciton `randomForest()`;
+* for boosting, the parameters are selected by cross-validation from cadidate combinations: $B\in\{1000, 3000, 5000\}$, $d\in\{1, 2, 3\}$ and $\lambda\in\{0.01, 0.1\}$;
+* for random forest, $m$ is selected from all possible value: 1~7;
+* for MARS, the model is additive model, i.e., the maximum degree of intercation term is 1 (no intercation).
+
+The code and the analysis method are similarly to the problem 3, so we will not include the details here. We just scan the error rates of these five models,
+```{r}
+all_error_rate
+```
+
+Then, only for the condition listed above, the best model is "`r names(all_error_rate)[which.min(all_error_rate)]`" with $\text{error rate}=`r min(all_error_rate)`$. For this model, the number of variables considered at each split is only one, and the number of trees in the forest is 500. 
+
+
+
+
+
+
 
