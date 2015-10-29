@@ -252,7 +252,7 @@ for (i in 1:10) {
                                     hidden = rand_hidden, 
                                     l1 = rand_l1, 
                                     l2 = rand_l2,
-                                    input_dropout_ratio = rand_input_dropout, 
+                                    input_dropout_ratio = 0, 
                                     hidden_dropout_ratios = rand_dropout)
         models <- c(models, dlmodel)
 }
@@ -361,7 +361,7 @@ for (i in 1:10) {
                                     hidden = rand_hidden, 
                                     l1 = rand_l1, 
                                     l2 = rand_l2,
-                                    input_dropout_ratio = rand_input_dropout, 
+                                    input_dropout_ratio = 0, 
                                     hidden_dropout_ratios = rand_dropout)
         models <- c(models, dlmodel)
 }
@@ -408,15 +408,16 @@ trans <- function(output){
 }
 for (i in 1:5){
         rand_numlayers <- sample(1:3, 1)
+        rand_hidden <- c(sample(10:50,rand_numlayers,T))
         rand_dropout <- runif(1, 0, 0.6)
         rand_input_dropout <- runif(1, 0, 0.5)
         rand_learningrate <- runif(1, 0.6, 1)
         dnn.fit.dig <- dbn.dnn.train(inputs.train, 
                                      target.train,
                                      activationfun = "sigm",
-                                     hidden = c(10),
+                                     hidden = rand_hidden,
                                      output = "softmax",
-                                     hidden_dropout = 0, 
+                                     hidden_dropout = rand_dropout, 
                                      learningrate = rand_learningrate,
                                      visible_dropout = rand_input_dropout)
         dnn.pred.dig <- nn.predict(dnn.fit.dig,
@@ -517,7 +518,7 @@ I fit most of models except DBN in this homework by using `train()` function in 
 
 For this problem, I refit the `Carseats` dataset using gradient boosting tree, bagging tree, random forest and single-layer neural network with 10 fold cross validation. The performances of models based on training datasets are
 ```{r}
-summary(resamps.Carseats)
+apply(resamps.Carseats$values[,-1], 2, mean)
 ```
 
 There is no doubt that the neural network should be the best model. The corresponding test MSEs are
@@ -557,29 +558,32 @@ The method for this problem is identical to the previous problem. The performanc
 summary(resamps.pima)
 ```
 
-The random forest is the best model while the neural network becomes the worst one. But for the corresponding test error rates are
+The bagging tree is the best model while the neural network becomes the worst one. But for the corresponding test error rates and confusion matrix of neural network are
 ```{r}
+library(caret)
 er.pima
+confusionMatrix(ANN.pred.pima, Pima.te$type)[[2]]
+confusionMatrix(ANN.pred.pima, Pima.te$type)[[3]][1]
+confusionMatrix(ANN.pred.pima, Pima.te$type)[[4]]
 ```
-So the neural network has the lowest test error rate. Just to be cautious, the lowest error rate here has nothing to do with stability. It is very likely this neural network will perform poorly on other test data sets
+This time, the boosting tree is the best model while the neural network is still  the worst one.
 
 The best hyper parameters of the neural network are
 ```{r}
 nnet.fit.pima$bestTune
 ```
 
-Then I try the `nnet()` function in `nnet` package to refit the net, using the tuning parameters above. The test error of the refitting neural is
-
+Then I try the `nnet()` function in `nnet` package to refit the net, using the tuning parameters above. The confusion matrix and some associated results are
 ```{r, cache=TRUE}
 library(nnet)
+library(caret)
 nnet.fit.pima.2 <- nnet(type ~ . , data = Pima.tr, 
-                        size=2, decay=0.5, trace = FALSE)
-nnet.pred.pima.2 <- predict(nnet.fit.pima.2, Pima.tr)
-rmse <- mean((nnet.pred.Carseats.2 - Carseats.test$Sales)^2)
-rmse
+                        size=9, decay=0.1, trace = FALSE)
+nnet.pred.pima.2 <- predict(nnet.fit.pima.2, Pima.te, type = "class")
+confusionMatrix(as.factor(nnet.pred.pima.2), Pima.te$type)[[2]]
+confusionMatrix(as.factor(nnet.pred.pima.2), Pima.te$type)[[3]][1]
+confusionMatrix(as.factor(nnet.pred.pima.2), Pima.te$type)[[4]]
 ```
-
-This is a little different from previouse model, which may indicate overfitting problems, since the dataset is not so "large".
 
 
 
@@ -587,7 +591,41 @@ This is a little different from previouse model, which may indicate overfitting 
 
 $\blacktriangleright$ \textbf{Exercises 3.\quad Solution.} 
 
+For deep belief network, there are many hyper (tuning) parameter needing to be chosen. But training a deep learning costs a lot of time, so I do not want to select hyper parameters using cross validation. I choose the method of random search. The candidate paramter space for searching is
+```{r, eval=FALSE}
+rand_numlayers <- sample(2:5, 1)
+rand_hidden <- c(sample(10:50, rand_numlayers, T))
+rand_dropout <- runif(1, 0, 0.6)
+rand_learningrate <- runif(1, 0.6, 1)
+dnn.fit.dig <- dbn.dnn.train(inputs.train, 
+                             target.train,
+                             activationfun = "sigm",
+                             hidden = rand_hidden,
+                             output = "linear",
+                             hidden_dropout = 0, 
+                             learningrate = rand_learningrate,
+                             visible_dropout = rand_input_dropout)
+```
+There are the number of layers, the number of neurons in each layer, the ratio of hidden layer dropout, and the leaning rate. Here since we have very few features, I will let the input dropout be 0. Besides the hyper parameters, there are still some other options; the activation function is sigmoid function and the output function is linear function.
+
+Then the MSE acquired from `deepnet` package is 
+```{r}
+dnn.mse.Carseats
+```
+and the MSE acquired from `darch` package is
+```{r}
+darch.mse.Carseats
+```
+
+Actually, there exists some critical problem(s), which would make the prediction become identical, but I do not figure out where the problem(s) is(are). So I have to try to use `h2o` package to refit the deep network, to evaluating the deep learning methos. The MSE acquired from `h2o` is 
+```{r}
+h2o.mse.Carseats
+```
+Good news is, this time the predictions are not same; but bad news is, it does not improve the MSE so much. 
+
 $\blacktriangleright$ \textbf{Exercises 4.\quad Solution.} 
+
+Like before, the method for this problem is identical to problem 3.. The only thing to do is to change the linear output funciton into softmax function.
 
 $\blacktriangleright$ \textbf{Exercises 5.\quad Solution.} 
 
@@ -601,6 +639,7 @@ time13-time1
 ## Plot
 ```{r, echo=FALSE, fig.align='center', fig.width=6, fig.height=4.5}
 plot(nnet.fit.Carseats)
+plot(nnet.fit.pima)
 ```
 
 
