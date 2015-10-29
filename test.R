@@ -173,12 +173,12 @@ best.err <- models.mse[1]
 for (i in 1:length(models)) {
         err <- models.mse[i]
         if (err < best.err) {
-                best_err <- err
-                best_model <- models[[i]]
+                best.err <- err
+                best.model <- models[[i]]
         }
 }
-dnn.fit.Carseats <- best_model
-dnn.mse.Carseats <- best_err
+dnn.fit.Carseats <- best.model
+dnn.mse.Carseats <- best.err
 
 # darch
 darch.fit.Carseats <- newDArch(dnn.fit.Carseats$size, 
