@@ -515,6 +515,9 @@ time13 <- Sys.time()
 time13 - time1
 ```
 
+I fit most of models except DBN in this homework by using `train()` function in `caret` package, because it can use multiple cores to execute high performance computation, and it can easily realize cross valitadion and model comparison. 
+
+
 $\blacktriangleright$ \textbf{Exercises 1.\quad Solution.} 
 
 I fit most of models except DBN in this homework by using `train()` function in `caret` package, because it can use multiple cores to execute high performance computation, and it can easily realize cross valitadion and model comparison. 
