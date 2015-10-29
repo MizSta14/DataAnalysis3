@@ -171,7 +171,7 @@ for (i in 1:20){
 }
 best.err <- models.mse[1]
 for (i in 1:length(models)) {
-        err <- models.mse[1]
+        err <- models.mse[i]
         if (err < best.err) {
                 best_err <- err
                 best_model <- models[[i]]
@@ -181,7 +181,7 @@ dnn.fit.Carseats <- best_model
 dnn.mse.Carseats <- best_err
 
 # darch
-darch.fit.Carseats <- newDArch(c(12, 10, 10, 10, 10, 1), 
+darch.fit.Carseats <- newDArch(dnn.fit.Carseats$size, 
                                batchSize=4,
                                ff=F)
 darch.fit.Carseats <- preTrainDArch(darch.fit.Carseats,
@@ -207,7 +207,7 @@ darch.pred.Carseats <-
         darch.pred.Carseats <- 
         getExecuteFunction(darch.fit.Carseats)(darch.fit.Carseats,inputs.test)
 outputs2 <- getExecOutputs(darch.pred.Carseats)
-outputs2[[length(outputs2)]]-Carseats.test$Sales
+mse(outputs2[[length(outputs2)]]-Carseats.test$Sales)
 
 
 
