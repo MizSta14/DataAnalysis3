@@ -148,7 +148,7 @@ names(er.pima) <- c("ANN", "randomForest", "GradientBoosting", "BaggedCART")
 #deepnet
 inputs.train <- model.matrix(Sales ~ ., data = Carseats.train)
 inputs.test <- model.matrix(Sales ~ ., data = Carseats.test)
-models <- c()
+models <- vector("list", 20)
 models.mse <- c()
 for (i in 1:20){
         rand_numlayers <- sample(2:5, 1)
@@ -166,30 +166,31 @@ for (i in 1:20){
         dnn.pred.Carseats <- nn.predict(dnn.fit.Carseats,
                                         inputs.test)
         dnn.mse.Carseats <- mean((dnn.pred.Carseats - Carseats.test[, 1])^2)
-        models <- c(models, dnn.pred.Carseats)
+        models[[i]] <- dnn.fit.Carseats
         models.mse <- c(models.mse, dnn.mse.Carseats)
 }
 best.err <- models.mse[1]
 for (i in 1:length(models)) {
         err <- models.mse[1]
-        if (err < best_err) {
+        if (err < best.err) {
                 best_err <- err
                 best_model <- models[[i]]
         }
 }
-dnn.pred.Carseats <- best_model
+dnn.fit.Carseats <- best_model
 dnn.mse.Carseats <- best_err
 
 # darch
-darch.fit.Carseats <- newDArch(dnn.pred.Carseats$hidden, 
+darch.fit.Carseats <- newDArch(c(12, 10, 10, 10, 10, 1), 
                                batchSize=4,
                                ff=F)
 darch.fit.Carseats <- preTrainDArch(darch.fit.Carseats,
                                     inputs.train,
-                                    maxEpoch = 200,
+                                    maxEpoch = 10,
                                     numCD = 4)
 layers <- getLayers(darch.fit.Carseats)
-for(i in length(layers):1){
+layers[[length(layers)]][[2]] <- linearUnitDerivative
+for(i in (length(layers) - 1):1){
         layers[[i]][[2]] <- sigmoidUnitDerivative
 }
 setLayers(darch.fit.Carseats) <- layers
@@ -197,8 +198,8 @@ rm(layers)
 setFineTuneFunction(darch.fit.Carseats) <- rpropagation
 darch.fit.Carseats <- fineTuneDArch(darch.fit.Carseats,
                                     trainData = inputs.train,
-                                    targetData = outputs.train,
-                                    maxEpoch = 200,
+                                    targetData = matrix(Carseats.train$Sales),
+                                    maxEpoch = 10,
                                     isBin = T)
 
 # Running the darch
@@ -206,7 +207,7 @@ darch.pred.Carseats <-
         darch.pred.Carseats <- 
         getExecuteFunction(darch.fit.Carseats)(darch.fit.Carseats,inputs.test)
 outputs2 <- getExecOutputs(darch.pred.Carseats)
-
+outputs2[[length(outputs2)]]-Carseats.test$Sales
 
 
 
