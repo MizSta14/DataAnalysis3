@@ -1,283 +1,260 @@
 setwd("~/Documents/git/DataAnalysis3")
 rm(list = ls())
-library(tree)
-library(ISLR)
-library(ggplot2)
+library(nnet)
+library(darch)
+library(deepnet)
+library(caret)
+library(doMC)
 library(MASS)
-library(randomForest)
+library(h2o)
 library(gbm)
-library(earth)
-library(mda)
-library(plotmo)
-par(mfrow = c(1, 1))
-folds <- 10
+library(plyr)
+library(randomForest)
+library(e1071)
+library(ipred)
+library(party)
+library(mboost)
+library(bst)
+library(ff)
+doMC::registerDoMC(cores=4)
+data("Carseats")
+data("Pima.tr")
+data("Pima.te")
+flist <- list("dig_test.RData", "dig_train.RData")
+load(flist[[1]])
+load(flist[[2]])
+rm(flist)
+dig_train <- data.frame(dig_train)
+dig_train.raw <- dig_train
+dig_test.raw <- dig_test
 
-#1
-p <- seq(0, 1, 0.01)
-error <- 1-apply(cbind(p, 1 - p), 1, max)
-gini <- 2*p*(1 - p)
-entropy <- -p * log(p) - (1 - p) * log(1 - p)
-plot(c(0, 1.5), c(0, 1), 
-     type = "n", 
-     xlab = "p", 
-     ylab = "index")
-lines(p, entropy, lty = 1)
-lines(p, gini, col = "red", lty = 2)
-lines(p, error, col = "blue", lty = 3)
-legend(0.8, 1, 
-       c("Entropy", "Gini index", "Classification Error"), 
-       lty=c(1, 2, 3), 
-       col = c("black", "red", "blue"), 
-       cex = .7)
+# 1.
+set.seed(5262562)
+trainIndex <- createDataPartition(Carseats$Sales, p=.75, list=F)
+Carseats.train <- Carseats[trainIndex, ]
+Carseats.test <- Carseats[-trainIndex, ]
+ctrl <- trainControl(method = "cv",
+                     number = 10)
+nnet.grid <- expand.grid(.decay = c(0.5, 0.1, 0.005, 0.001), 
+                         .size = 1:10)
+nnet.fit.Carseats <- train(Sales ~ ., 
+                           data = Carseats.train,
+                           method = "nnet", 
+                           maxit = 1000,
+                           trControl = ctrl,
+                           tuneGrid = nnet.grid, 
+                           preProcess = c("center", "scale"),
+                           linout = TRUE, 
+                           trace = FALSE)
+rf.fit.Carseats <- train(Sales ~ ., 
+                         data = Carseats.train,
+                         method = "rf", 
+                         maxit = 1000,
+                         trControl = ctrl,
+                         tuneLength = 10,
+                         preProcess = c("center", "scale"))
+boost.grid <- expand.grid(.n.trees = seq(0, 1000, 200), 
+                          .interaction.depth = 1:3, 
+                          .shrinkage = c(0.1, 0.01, 0.001), 
+                          .n.minobsinnode = c(5, 10, 20))
+boost.fit.Carseats <- train(Sales ~ ., 
+                            data = Carseats.train,
+                            method ='gbm',
+                            preProc = c('center','scale'),
+                            tuneGrid = boost.grid, 
+                            trControl = ctrl)
+bagging.fit.Carseats <- train(Sales ~ ., 
+                              data = Carseats.train,
+                              method = "treebag", 
+                              maxit = 1000,
+                              trControl = ctrl,
+                              preProcess = c("center", "scale"))
+resamps <- resamples(list(ANN = nnet.fit.Carseats, 
+                          randomForest = rf.fit.Carseats, 
+                          GradientBoosting = boost.fit.Carseats, 
+                          BaggedCART = bagging.fit.Carseats))
+ANN.pred.Carseats <- predict(nnet.fit.Carseats, newdata = Carseats.test)
+rf.pred.Carseats <- predict(rf.fit.Carseats, newdata = Carseats.test)
+boost.pred.Carseats <- predict(boost.fit.Carseats, newdata = Carseats.test)
+bagging.pred.Carseats <- predict(bagging.fit.Carseats, newdata = Carseats.test)
+pred.Carseats <-matrix(c(ANN.pred.Carseats, 
+                         rf.pred.Carseats, 
+                         boost.pred.Carseats, 
+                         bagging.pred.Carseats), 
+                       ncol = 4, 
+                       byrow = FALSE)
+mse <- function(r){mean(r^2)}
+mse.Carseats <- apply(pred.Carseats - Carseats.test$Sales, 2, mse)
+names(mse.Carseats) <- c("ANN", "randomForest", "GradientBoosting", "BaggedCART")
+
 
 #2
-probs <- c(0.1, 0.15, 0.2, 0.2, 0.55, 0.6, 0.6, 0.65, 0.7, 0.75)
-vote <- ifelse(sum(probs > 0.5) > length(probs)/2, TRUE, FALSE)
-average <- ifelse(mean(probs) > 0.5, TRUE, FALSE)
+ctrl <- trainControl(method = "cv",
+                     number = 10, 
+                     classProbs = TRUE)
+nnet.grid <- expand.grid(.decay = c(0.5, 0.1, 0.005, 0.001), 
+                         .size = 1:10)
+nnet.fit.pima <- train(type ~ ., 
+                       data = Pima.tr,
+                       method = "nnet", 
+                       maxit = 1000,
+                       trControl = ctrl,
+                       tuneGrid = nnet.grid, 
+                       preProcess = c("center", "scale"),
+                       trace = FALSE)
+rf.fit.pima <- train(type ~ ., 
+                     data = Pima.tr,
+                     method = "rf", 
+                     maxit = 1000,
+                     trControl = ctrl,
+                     tuneLength = 10,
+                     preProcess = c("center", "scale"))
+boost.grid <- expand.grid(.n.trees = seq(0, 1000, 200), 
+                          .interaction.depth = 1:3, 
+                          .shrinkage = c(0.1, 0.01, 0.001), 
+                          .n.minobsinnode = c(5, 10, 20))
+boost.fit.pima <- train(type ~ ., 
+                        data = Pima.tr,
+                        method = 'gbm',
+                        preProc = c('center','scale'),
+                        tuneGrid = boost.grid, 
+                        trControl = ctrl)
+bagging.fit.pima <- train(type ~ ., 
+                          data = Pima.tr,
+                          method = "treebag", 
+                          maxit = 1000,
+                          trControl = ctrl,
+                          preProcess = c("center", "scale"))
+resamps <- resamples(list(ANN = nnet.fit.pima, 
+                          randomForest = rf.fit.pima, 
+                          GradientBoosting = boost.fit.pima, 
+                          BaggedCART = bagging.fit.pima))
+ANN.pred.pima <- predict(nnet.fit.pima, newdata = Pima.te)
+rf.pred.pima <- predict(rf.fit.pima, newdata = Pima.te)
+boost.pred.pima <- predict(boost.fit.pima, newdata = Pima.te)
+bagging.pred.pima <- predict(bagging.fit.pima, newdata = Pima.te)
+pred.pima <-matrix(c(ANN.pred.pima, 
+                     rf.pred.pima, 
+                     boost.pred.pima, 
+                     bagging.pred.pima), 
+                   ncol = 4, 
+                   byrow = FALSE)
+er <- function(wrong){mean(abs(wrong))}
+er.pima <- apply(pred.pima - as.numeric(Pima.te$type), 2, er)
+names(er.pima) <- c("ANN", "randomForest", "GradientBoosting", "BaggedCART")
 
-#3
-set.seed(1)
-train_size <- 200
-train <- sample(1:nrow(Carseats), 
-                size = train_size)
-carseats_train <- Carseats[train, ]
-carseats_test <- Carseats[-train, ]
-#(a)
-tree_carseats <- tree(Sales ~ ., 
-                      data = carseats_train)
-tree_pred=predict(tree_carseats, 
-                  carseats_test)
-summary(tree_carseats)
-plot(tree_carseats)
-text(tree_carseats,
-     pretty = 0, 
-     cex = .7)
-tree_test_mse <- mean((tree_pred - carseats_test$Sales)^2)
 
-#(b)
-cv_carseats=cv.tree(tree_carseats)
-par(mfrow = c(1, 2))
-plot(cv_carseats$size,cv_carseats$dev, 
-     type="b")
-plot(cv_carseats$k,cv_carseats$dev, 
-     type="b")
-par(mfrow = c(1, 1))
-best_tree_size <- cv_carseats$size[which.min(cv_carseats$dev)]
-prune_carseats <- prune.tree(tree_carseats,
-                             best = best_tree_size)
-plot(prune_carseats)
-text(prune_carseats,
-     pretty = 0)
-prune_tree_pred <- predict(prune_carseats, 
-                           carseats_test)
-prune_test_mse <- mean((prune_tree_pred - carseats_test$Sales)^2)
-
-#(c)
-bag_carseats <- randomForest(Sales ~ ., 
-                             data = carseats_train, 
-                             mtry = ncol(carseats_train) - 1, 
-                             importance = TRUE)
-bag_pred <- predict(bag_carseats,
-                    newdata = carseats_test)
-bag_test_mse <- mean((bag_pred - carseats_test$Sales)^2)
-important_var <- names(sort(importance(bag_carseats)[, 1], 
-                            decreasing = TRUE))[c(1, 2)]
-importance(bag_carseats)
-varImpPlot(bag_carseats, 
-           main = "Importance Plot")
-
-#(d)
-boost_cv_sample <- sample(1:folds,
-                          nrow(carseats_train), 
-                          replace = TRUE)
-B <- seq(1000, 5000, by = 1000)
-d <- 1:4
-lambda <- c(0.001, 0.01)
-boost_cv_mse <- array(dim = c(length(B), length(d), length(lambda)), 
-                      dimnames = list(B, d, lambda))
-temp_mse <- numeric(10)
-ptm <- proc.time()
-for (i in 1:length(B)){
-        for (j in 1:length(d)){
-                for (k in 1:length(lambda)){
-                        for (n in 1:folds){
-                                boost_carseats <- gbm(Sales ~ ., 
-                                                      data = carseats_train[boost_cv_sample != n, ], 
-                                                      distribution = "gaussian", 
-                                                      n.trees = B[i], 
-                                                      interaction.depth = d[j], 
-                                                      shrinkage = lambda[k])
-                                boost_pred <- predict(boost_carseats,
-                                                      newdata = carseats_train[boost_cv_sample == n, ], 
-                                                      n.trees = B[i])
-                                temp_mse[n] <- mean((boost_pred - carseats_train[boost_cv_sample == n, "Sales"])^2)
-                        }
-                        boost_cv_mse[i, j, k] <- mean(temp_mse)
-                        
-                }
+#3.
+#deepnet
+inputs.train <- model.matrix(Sales ~ ., data = Carseats.train)
+inputs.test <- model.matrix(Sales ~ ., data = Carseats.test)
+models <- c()
+models.mse <- c()
+for (i in 1:20){
+        rand_numlayers <- sample(2:5, 1)
+        rand_hidden <- c(sample(10:50, rand_numlayers, T))
+        rand_dropout <- runif(1, 0, 0.6)
+        rand_learningrate <- runif(1, 0.6, 1)
+        dnn.fit.Carseats <- dbn.dnn.train(inputs.train, 
+                                          Carseats.train[, 1], 
+                                          hidden = rand_hidden, 
+                                          activationfun = "sigm",
+                                          output = "linear",
+                                          hidden_dropout = rand_dropout, 
+                                          learningrate = rand_learningrate,
+                                          visible_dropout = 0)
+        dnn.pred.Carseats <- nn.predict(dnn.fit.Carseats,
+                                        inputs.test)
+        dnn.mse.Carseats <- mean((dnn.pred.Carseats - Carseats.test[, 1])^2)
+        models <- c(models, dnn.pred.Carseats)
+        models.mse <- c(models.mse, dnn.mse.Carseats)
+}
+best.err <- models.mse[1]
+for (i in 1:length(models)) {
+        err <- models.mse[1]
+        if (err < best_err) {
+                best_err <- err
+                best_model <- models[[i]]
         }
 }
-working_time <- proc.time() - ptm
-Best_B <- as.numeric(dimnames(boost_cv_mse)[[1]][which(boost_cv_mse == min(boost_cv_mse), arr.ind = TRUE)[1, 1]])
-Best_d <- as.numeric(dimnames(boost_cv_mse)[[2]][which(boost_cv_mse == min(boost_cv_mse), arr.ind = TRUE)[1, 2]])
-Best_lambda <- Best.B <- as.numeric(dimnames(boost_cv_mse)[[3]][which(boost_cv_mse == min(boost_cv_mse), arr.ind = TRUE)[1, 3]])
-boost_carseats <- gbm(Sales ~ ., 
-                      data = carseats_train, 
-                      distribution = "gaussian", 
-                      n.trees = Best_B, 
-                      interaction.depth = Best_d, 
-                      shrinkage = Best_lambda)
-boost_pred <- predict(boost_carseats,
-                      newdata = carseats_test, 
-                      n.trees = Best_B)
-boost_mse <- mean((boost_pred - carseats_test$Sales)^2)
+dnn.pred.Carseats <- best_model
+dnn.mse.Carseats <- best_err
 
-#(e)
-max_m <- ncol(Carseats) - 1
-rf_mse <- numeric(max_m)
-names(rf_mse) <- 1:max_m
-rf_importances <- rep(list(matrix(NA, 10, 2)), max_m)
-names(rf_importances) <- 1:max_m
-for (i in 1:max_m){
-        rf_carseats <- randomForest(Sales ~ ., 
-                                    data = carseats_train, 
-                                    mtry = i, 
-                                    importance = TRUE)
-        rf_importances[[i]] <- importance(rf_carseats)
-        rf_pred = predict(rf_carseats, 
-                          newdata = carseats_test)
-        rf_mse[i] <- mean((rf_pred-carseats_test$Sales)^2)
+# darch
+darch.fit.Carseats <- newDArch(dnn.pred.Carseats$hidden, 
+                               batchSize=4,
+                               ff=F)
+darch.fit.Carseats <- preTrainDArch(darch.fit.Carseats,
+                                    inputs.train,
+                                    maxEpoch = 200,
+                                    numCD = 4)
+layers <- getLayers(darch.fit.Carseats)
+for(i in length(layers):1){
+        layers[[i]][[2]] <- sigmoidUnitDerivative
 }
+setLayers(darch.fit.Carseats) <- layers
+rm(layers)
+setFineTuneFunction(darch.fit.Carseats) <- rpropagation
+darch.fit.Carseats <- fineTuneDArch(darch.fit.Carseats,
+                                    trainData = inputs.train,
+                                    targetData = outputs.train,
+                                    maxEpoch = 200,
+                                    isBin = T)
 
-#(f)
-mars_carseats <- earth(Sales ~ ., 
-                       data = carseats_train, 
-                       pmethod = "cv", 
-                       nfold = 10)
-mars_pred <- predict(mars_carseats, 
-                     newdata = carseats_test)
-mars_mse <- mean((mars_pred-carseats_test$Sales)^2)
-
-
-#4
-set.seed(1)
-
-#tree
-tree_pima <- tree(type ~ ., 
-                  data = Pima.tr)
-cv_tree_pima <- cv.tree(tree_pima, 
-                        FUN = prune.misclass)
-best_tree_size <- cv_tree_pima$size[which.min(cv_tree_pima$dev)]
-prune_pima <- prune.tree(tree_pima,
-                         best = best_tree_size)
-tree_pred=predict(prune_pima, 
-                  Pima.te, 
-                  type = "class")
-summary(prune_pima)
-plot(prune_pima)
-text(prune_pima,
-     pretty = 0)
-tree_test_mse <- (table(tree_pred, Pima.te$type)[1, 2] + 
-                          table(tree_pred, Pima.te$type)[2,1]) / nrow(Pima.te)
+# Running the darch
+darch.pred.Carseats <- 
+        darch.pred.Carseats <- 
+        getExecuteFunction(darch.fit.Carseats)(darch.fit.Carseats,inputs.test)
+outputs2 <- getExecOutputs(darch.pred.Carseats)
 
 
-#bagging
-bag_pima <- randomForest(type ~ ., 
-                         data = Pima.tr, 
-                         mtry = ncol(Pima.tr) - 1, 
-                         importance = TRUE)
-bag_pred <- predict(bag_pima,
-                    newdata = Pima.te)
-bag_test_mse <- (table(tree_pred, Pima.te$type)[1, 2] + 
-                         table(bag_pred, Pima.te$type)[2,1]) / nrow(Pima.te)
-important_var <- names(sort(importance(bag_pima)[, 2], 
-                            decreasing = TRUE))[c(1, 2)]
-importance(bag_pima)
-varImpPlot(bag_pima, 
-           main = "Importance Plot")
 
-#boosting
-boost_cv_sample <- sample(1:folds,
-                          nrow(Pima.tr), 
-                          replace = TRUE)
-B <- seq(1000, 5000, by = 2000)
-d <- 1:3
-lambda <- c(0.001, 0.01)
-boost_cv_mse <- array(dim = c(length(B), length(d), length(lambda)), 
-                      dimnames = list(B, d, lambda))
-temp_mse <- numeric(10)
-ptm <- proc.time()
-for (i in 1:length(B)){
-        for (j in 1:length(d)){
-                for (k in 1:length(lambda)){
-                        for (n in 1:folds){
-                                boost_pima <- gbm(as.numeric(type) - 1 ~ ., 
-                                                  data = Pima.tr[boost_cv_sample != n, ], 
-                                                  distribution = "bernoulli", 
-                                                  n.trees = B[i], 
-                                                  interaction.depth = d[j], 
-                                                  shrinkage = lambda[k])
-                                boost_pred <- predict(boost_pima,
-                                                      newdata = Pima.tr[boost_cv_sample == n, ], 
-                                                      n.trees = B[i],
-                                                      type = "response") 
-                                boost_pred <- ifelse(boost_pred > 0.5, "Yes", "No")
-                                temp_mse[n] <- attr(confusion(boost_pred, Pima.tr[boost_cv_sample == n, "type"]), 
-                                                    "error")
-                        }
-                        boost_cv_mse[i, j, k] <- mean(temp_mse)
-                }
+
+
+
+
+
+#4.
+
+
+# 5
+localH2O <- h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+dig_train[, 785] <- as.factor(dig_train[, 785])
+colnames(dig_train) <- 1:785
+colnames(dig_test) <- 1:785
+mnist.train <- as.h2o(localH2O, dig_train)
+mnist.test <- as.h2o(localH2O, dig_test)
+models <- c()
+for (i in 1:10) {
+        rand_activation <- c("TanhWithDropout", "RectifierWithDropout")[sample(1:2,1)]
+        rand_numlayers <- sample(2:5,1)
+        rand_hidden <- c(sample(10:50,rand_numlayers,T))
+        rand_l1 <- runif(1, 0, 1e-3)
+        rand_l2 <- runif(1, 0, 1e-3)
+        rand_dropout <- c(runif(rand_numlayers, 0, 0.6))
+        rand_input_dropout <- runif(1, 0, 0.5)
+        dlmodel <- h2o.deeplearning(x = 1:784, 
+                                    y = 785, 
+                                    training_frame = mnist.train, 
+                                    validation_frame = mnist.test,
+                                    epochs = 0.1,
+                                    activation = rand_activation, 
+                                    hidden = rand_hidden, 
+                                    l1 = rand_l1, 
+                                    l2 = rand_l2,
+                                    input_dropout_ratio = rand_input_dropout, 
+                                    hidden_dropout_ratios = rand_dropout)
+        models <- c(models, dlmodel)
+}
+best_err <- models[[1]]@model$valid_class_error #best model from grid search above
+for (i in 1:length(models)) {
+        err <- models[[i]]@model$valid_class_error
+        if (err < best_err) {
+                best_err <- err
+                best_model <- models[[i]]
         }
 }
-working_time_2 <- proc.time() - ptm
-Best_B <- as.numeric(dimnames(boost_cv_mse)[[1]][which(boost_cv_mse == min(boost_cv_mse), arr.ind = TRUE)[1, 1]])
-Best_d <- as.numeric(dimnames(boost_cv_mse)[[2]][which(boost_cv_mse == min(boost_cv_mse), arr.ind = TRUE)[1, 2]])
-Best_lambda <- Best.B <- as.numeric(dimnames(boost_cv_mse)[[3]][which(boost_cv_mse == min(boost_cv_mse), arr.ind = TRUE)[1, 3]])
-boost_pima <- gbm(as.numeric(type) - 1 ~ ., 
-                  data = Pima.tr, 
-                  distribution = "bernoulli", 
-                  n.trees = Best_B, 
-                  interaction.depth = Best_d, 
-                  shrinkage = Best_lambda)
-boost_pred <- predict(boost_pima,
-                      newdata = Pima.te, 
-                      n.trees = Best_B, 
-                      type = "response")
-boost_pred <- ifelse(boost_pred > 0.5, "Yes", "No")
-boost_test_mse <- attr(confusion(boost_pred, Pima.te$type), 
-                       "error")
+best_model
 
 
-#random forest
-max_m <- ncol(Pima.tr) - 1
-rf_mse <- numeric(max_m)
-names(rf_mse) <- 1:max_m
-for (i in 1:max_m){
-        rf_pima <- randomForest(type ~ ., 
-                                data = Pima.tr, 
-                                mtry = i, 
-                                importance = TRUE)
-        rf_pred = predict(rf_pima, 
-                          newdata = Pima.te)
-        rf_mse[i] <- attr(confusion(rf_pred, Pima.te$type), 
-                          "error")
-}
-rf_test_mse <- rf_mse[which.min(rf_mse)]
-
-# mars
-mars_pima <- earth(type ~ ., 
-                   data = Pima.tr, 
-                   pmethod = "cv", 
-                   nfold = 10)
-mars_pred <- predict(mars_pima, 
-                     newdata = Pima.te)
-mars_pred <- ifelse(mars_pred[, 1] > 0.5, "Yes", "No")
-mars_test_mse <- attr(confusion(mars_pred, Pima.te$type), 
-                      "error")
-
-all_error_rate <- c(tree_test_mse, 
-                    bag_test_mse, 
-                    boost_test_mse, 
-                    rf_test_mse, 
-                    mars_test_mse)
 

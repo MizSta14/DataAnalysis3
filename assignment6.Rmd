@@ -1,0 +1,25 @@
+---
+title: "STAT 8330 FALL 2015 ASSIGNMENT 6"
+author: "Peng Shao"
+date: "October 25, 2015"
+output: 
+        pdf_document:
+                includes:
+                        in_header: mystyles3.sty
+---
+```{r environ, echo = FALSE, include=FALSE}
+setwd("~/Documents/git/DataAnalysis3")
+rm(list = ls())
+library(nnet)
+library(darch)
+library(deepnet)
+library(caret)
+library(doMC)
+doMC::registerDoMC(cores=4)
+```
+
+
+
+
+
+

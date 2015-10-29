@@ -1,0 +1,25 @@
+load("/Users/pengs/Documents/git/DataAnalysis3/dig_train.RData")
+names(dig_train)
+load("/Users/pengs/Documents/git/DataAnalysis3/dig_test.RData")
+rbind(dig_train, dig_test)
+names(dig_train) <- 1:785
+names(dig_train)
+rm(dig_train)
+load("/Users/pengs/Documents/git/DataAnalysis3/dig_train.RData")
+names(dig_train)
+names(dig_train)[[1]]=1:785
+names(dig_train)
+rm(dig_train)
+load("/Users/pengs/Documents/git/DataAnalysis3/dig_train.RData")
+colnames(dig_train)=1:785
+names(dig_train)
+colnames(dig_train)
+colnames(dig_test)=1:785
+rbind(dig_train, dig_test)
+r <- rbind(dig_train, dig_test)
+dim(r)
+rm(list = ls())
+load("/Users/pengs/Documents/git/DataAnalysis3/dig_train.RData")
+load("/Users/pengs/Documents/git/DataAnalysis3/dig_test.RData")
+colnames(dig_tr)
+colnames(dig_train)
