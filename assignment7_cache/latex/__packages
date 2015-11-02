@@ -1,0 +1,16 @@
+base
+e1071
+ISLR
+survival
+penalized
+lattice
+ggplot2
+caret
+caTools
+gplots
+ROCR
+foreach
+iterators
+doMC
+Matrix
+glmnet
