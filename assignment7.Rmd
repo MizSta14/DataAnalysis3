@@ -5,7 +5,7 @@ date: "October 30, 2015"
 output: 
         pdf_document:
                 includes:
-                        in_header: mystyles3.sty
+                        in_header: mystyles7.sty
 ---
 ```{r environ, echo = TRUE, include=FALSE, cache=TRUE}
 setwd("~/Documents/git/DataAnalysis3")
@@ -227,9 +227,9 @@ train.input <- model.matrix(Purchase ~ ., data = train)
 test.input <- model.matrix(Purchase ~ ., data = test)
 penal.grid <- expand.grid(l1 = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10), 
                           l2 = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10))
-cver <- numeric(length(penal.grid))
+cvml <- numeric(length(penal.grid))
 for (i in 1:nrow(penal.grid)){
-        cver[i] <- cvl(response = train$Purchase, 
+        cvml[i] <- cvl(response = train$Purchase, 
                        penalized = train.input,
                        lambda1 = penal.grid[i, 1],
                        lambda2 = penal.grid[i, 2],
@@ -237,7 +237,7 @@ for (i in 1:nrow(penal.grid)){
                        trace = FALSE, 
                        fold = 10)$cvl
 }
-ind <- which.min(cver)
+ind <- which.max(cvml)
 penlogis.fit <- penalized(response = train$Purchase, 
                           penalized = train.input, 
                           model = "logistic", 
@@ -418,7 +418,7 @@ The optimal penalty paramters are
 penlogis.fit@lambda1
 penlogis.fit@lambda2
 ```
-The training error rate is `r round(1 - cm.penlogis.tr$overall[1], 4) * 100`\%, and the test error rate is `r round(1 - cm.penlogis.te$overall[1], 4) * 100`\%. The training AUC is `r round(penlogis.auc.tr, 4)` and the test AUC is `r round(penlogis.auc.te, 4)`. So the penalized logistic regression is worse than any other methods in terms of AUC, but not that much. The ROC plot is
+The training error rate is `r round(1 - cm.penlogis.tr$overall[1], 4) * 100`\%, and the test error rate is `r round(1 - cm.penlogis.te$overall[1], 4) * 100`\%. The training AUC is `r round(penlogis.auc.tr, 4)` and the test AUC is `r round(penlogis.auc.te, 4)`. So based on only this dataset, the penalized logistic regression is better than linear SVM and neural net SVM, but worse than the other three models, in terms of AUC. Gernally speaking, it can work as well as the other models. The ROC plot is
 ```{r, fig.align='center', fig.height=4, echo=FALSE}
 par(mfrow = c(1, 2), 
     oma = c(0, 0, 2, 0))
@@ -460,9 +460,9 @@ train.input <- model.matrix(Purchase ~ ., data = train)
 test.input <- model.matrix(Purchase ~ ., data = test)
 penal.grid <- expand.grid(l1 = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10), 
                           l2 = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10))
-cver <- numeric(length(penal.grid))
+cvml <- numeric(length(penal.grid))
 for (i in 1:nrow(penal.grid)){
-        cver[i] <- cvl(response = train$Purchase, 
+        cvml[i] <- cvl(response = train$Purchase, 
                        penalized = train.input,
                        lambda1 = penal.grid[i, 1],
                        lambda2 = penal.grid[i, 2],
@@ -470,7 +470,7 @@ for (i in 1:nrow(penal.grid)){
                        trace = FALSE, 
                        fold = 10)$cvl
 }
-ind <- which.min(cver)
+ind <- which.max(cvml)
 penlogis.fit <- penalized(response = train$Purchase, 
                           penalized = train.input, 
                           model = "logistic", 
