@@ -7,7 +7,7 @@ output:
                 includes:
                         in_header: mystyles8.sty
 ---
-```{r environ, echo = TRUE, include=FALSE, cache=TRUE}
+```{r prerun, include=FALSE, cache=TRUE}
 setwd("~/Documents/git/DataAnalysis3")
 rm(list = ls())
 set.seed(1)
