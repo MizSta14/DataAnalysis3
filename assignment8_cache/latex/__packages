@@ -1,0 +1,17 @@
+base
+plyr
+maps
+mapdata
+sp
+maptools
+scales
+ggplot2
+mapproj
+ggmap
+ggbiplot
+proto
+ggfortify
+lattice
+caret
+kernlab
+RDRToolbox

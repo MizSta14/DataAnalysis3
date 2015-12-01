@@ -108,9 +108,9 @@ pr.out.nonsd.var <- pr.out.nonsd$sdev^2
 pr.out.sd.var <- pr.out.sd$sdev^2
 loadingmap1 <- ggplot(data = locs[keep, ], 
                       aes(x = lon, y = lat, color = pr.out.nonsd$rotation[, 1]))
-loadingmap1 + 
+loadingmap1 <- loadingmap1 + 
         geom_point() + 
-        scale_colour_gradient(name = "Mean Temp.", 
+        scale_colour_gradient(name = "Loading", 
                               low = "darkblue", 
                               high = "yellow") +
         ylab("Latitude") +
@@ -119,9 +119,9 @@ loadingmap1 +
         theme(plot.title = element_text(lineheight=1, face="bold"))
 loadingmap2 <- ggplot(data = locs[keep, ], 
                       aes(x = lon, y = lat, color = pr.out.nonsd$rotation[, 2]))
-loadingmap2 + 
+loadingmap2 <- loadingmap2 + 
         geom_point() + 
-        scale_colour_gradient(name = "Mean Temp.", 
+        scale_colour_gradient(name = "Loading", 
                               low = "darkblue", 
                               high = "yellow") +
         ylab("Latitude") +
@@ -140,7 +140,7 @@ pc2series <- pc2series + geom_line() +
         ylab("PC2 Scores") +
         ggtitle("Second Component Time Series") +
         theme(plot.title = element_text(lineheight=1, face="bold"))
-multiplot(pc1series, pc2series, cols=2)
+multiplot(loadingmap1, pc1series, loadingmap2, pc2series, cols=2)
 
 
 

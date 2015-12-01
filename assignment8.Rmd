@@ -10,555 +10,617 @@ output:
 ```{r prerun, include=FALSE, cache=TRUE}
 setwd("~/Documents/git/DataAnalysis3")
 rm(list = ls())
-set.seed(1)
-library(e1071)
-library(ISLR)
-library(penalized)
+library(plyr)
+library(maps)
+library(mapdata)
+library(maptools)  
+library(scales)
+library(ggplot2)
+library(mapproj)
+library(ggmap)
+library(ggbiplot)
+library(ggfortify)
 library(caret)
-library(caTools)
-library(ROCR)
-library(doMC)
-library(glmnet)
-attach(OJ)
-doMC::registerDoMC(cores=4)
-Cost <- c(0.01, 0.05, 0.1, 0.5, 1, 5, 10)
-Gamma <- c(0.001, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 100)
-l1 <- seq(0, 1, 0.25)
-l2 <- seq(0, 1, 0.25)
-Degree <- 2
-train.ind <- sample(1:nrow(OJ), 800)
-train <- OJ[train.ind, ]
-test <- OJ[-train.ind, ]
-ctrl <- tune.control(sampling = "cross", 
-                     cross = 10)
-
-# 1
-kernel.func <- "linear"
-tune.svm.lin <- tune(svm, 
-                     Purchase ~ . , 
-                     data = train, 
-                     ranges = list(kernel = kernel.func,
-                                   cost = Cost),
-                     tunecontrol = ctrl
-)
-cver.svm.lin <- tune.svm.lin$performances
-svm.lin <- svm(Purchase ~ . ,
-               data = train, 
-               kernel = kernel.func, 
-               cost = tune.svm.lin$best.parameters$cost, 
-               decision.values = TRUE)
-svm.pred.lin.tr <- predict(svm.lin, 
-                           newdata = train, 
-                           decision.values = TRUE)
-svm.pred.lin.te <- predict(svm.lin, 
-                           newdata = test, 
-                           decision.values = TRUE)
-cm.lin.tr <- confusionMatrix(svm.pred.lin.tr, train$Purchase)
-cm.lin.te <- confusionMatrix(svm.pred.lin.te, test$Purchase)
-
-# 2
-
-kernel.func <- "polynomial"
-tune.svm.poly <- tune(svm, 
-                      Purchase ~ . , 
-                      data = train, 
-                      ranges = list(kernel = kernel.func,
-                                    cost = Cost, 
-                                    degree = Degree),
-                      tunecontrol = ctrl
-)
-cver.svm.poly <- tune.svm.poly$performances
-svm.poly <- svm(Purchase ~ . ,
-                data = train, 
-                kernel = kernel.func, 
-                cost = tune.svm.poly$best.parameters$cost, 
-                degree = Degree,
-                decision.values = TRUE)
-svm.pred.poly.tr <- predict(svm.poly, 
-                            newdata = train, 
-                            decision.values = TRUE)
-svm.pred.poly.te <- predict(svm.poly, 
-                            newdata = test, 
-                            decision.values = TRUE)
-cm.poly.tr <- confusionMatrix(svm.pred.poly.tr, train$Purchase)
-cm.poly.te <- confusionMatrix(svm.pred.poly.te, test$Purchase)
-
-# 3
-kernel.func <- "radial"
-tune.svm.rbf <- tune(svm, 
-                     Purchase ~ . , 
-                     data = train, 
-                     ranges = list(kernel = kernel.func,
-                                   cost = Cost, 
-                                   gamma = Gamma),
-                     tunecontrol = ctrl
-)
-cver.svm.rbf <- tune.svm.rbf$performances
-svm.rbf <- svm(Purchase ~ . ,
-               data = train, 
-               kernel = kernel.func, 
-               cost = tune.svm.rbf$best.parameters$cost, 
-               gamma = tune.svm.rbf$best.parameters$gamma, 
-               decision.values = TRUE)
-svm.pred.rbf.tr <- predict(svm.rbf, 
-                           newdata = train, 
-                           decision.values = TRUE)
-svm.pred.rbf.te <- predict(svm.rbf, 
-                           newdata = test, 
-                           decision.values = TRUE)
-cm.rbf.tr <- confusionMatrix(svm.pred.rbf.tr, train$Purchase)
-cm.rbf.te <- confusionMatrix(svm.pred.rbf.te, test$Purchase)
-
-
-# 4
-kernel.func <- "sigmoid"
-tune.svm.sigm <- tune(svm, 
-                      Purchase ~ . , 
-                      data = train, 
-                      ranges = list(kernel = kernel.func,
-                                    cost = Cost, 
-                                    gamma = Gamma),
-                      tunecontrol = ctrl
-)
-cver.svm.sigm <- tune.svm.sigm$performances
-svm.sigm <- svm(Purchase ~ . ,
-                data = train, 
-                kernel = kernel.func, 
-                cost = tune.svm.sigm$best.parameters$cost, 
-                gamma = tune.svm.sigm$best.parameters$gamma, 
-                decision.values = TRUE)
-svm.pred.sigm.tr <- predict(svm.sigm, 
-                            newdata = train, 
-                            decision.values = TRUE)
-svm.pred.sigm.te <- predict(svm.sigm, 
-                            newdata = test, 
-                            decision.values = TRUE)
-cm.sigm.tr <- confusionMatrix(svm.pred.sigm.tr, train$Purchase)
-cm.sigm.te <- confusionMatrix(svm.pred.sigm.te, test$Purchase)
-
-# 5
-logis.fit <- glm(Purchase ~ . , 
-                 data = train, 
-                 family = binomial(logit))
-logis.pred.tr <- predict.glm(logis.fit, 
-                             newdata = train, 
-                             type = "response")
-logis.pred.te <- predict.glm(logis.fit, 
-                             newdata = test, 
-                             type = "response")
-cm.logis.tr <- confusionMatrix(as.factor(ifelse(logis.pred.tr >= 0.5, 
-                                                "MM", 
-                                                "CH")),
-                               train$Purchase)
-cm.logis.te <- confusionMatrix(as.factor(ifelse(logis.pred.te >= 0.5, 
-                                                "MM", 
-                                                "CH")),
-                               test$Purchase)
-
-
-# 6
-op <- par(mfrow = c(1, 2), 
-          oma = c(0, 0, 2, 0))
-rocplot=function(pred, truth, ...){
-        predob = prediction (pred, truth)
-        perf = performance (predob , "tpr", "fpr") 
-        plot(perf ,...)
+library(kernlab)
+library(RDRToolbox)
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+        library(grid)
+        
+        # Make a list from the ... arguments and plotlist
+        plots <- c(list(...), plotlist)
+        
+        numPlots = length(plots)
+        
+        # If layout is NULL, then use 'cols' to determine layout
+        if (is.null(layout)) {
+                # Make the panel
+                # ncol: Number of columns of plots
+                # nrow: Number of rows needed, calculated from # of cols
+                layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                                 ncol = cols, nrow = ceiling(numPlots/cols))
+        }
+        
+        if (numPlots==1) {
+                print(plots[[1]])
+                
+        } else {
+                # Set up the page
+                grid.newpage()
+                pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+                
+                # Make each plot, in the correct location
+                for (i in 1:numPlots) {
+                        # Get the i,j matrix positions of the regions that contain this subplot
+                        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+                        
+                        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                                        layout.pos.col = matchidx$col))
+                }
+        }
 }
-rocplot(attributes(svm.pred.lin.tr)$decision.values, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(attributes(svm.pred.lin.te)$decision.values, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Linear SVM", outer = TRUE, cex = 1.5)
-rocplot(attributes(svm.pred.poly.tr)$decision.values, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(attributes(svm.pred.poly.te)$decision.values, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Polynomial SVM", outer = TRUE, cex = 1.5)
-rocplot(attributes(svm.pred.rbf.tr)$decision.values, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(attributes(svm.pred.rbf.te)$decision.values, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Radial Basis SVM", outer = TRUE, cex = 1.5)
-rocplot(attributes(svm.pred.sigm.tr)$decision.values, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(attributes(svm.pred.sigm.te)$decision.values, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for NN SVM", outer = TRUE, cex = 1.5)
-rocplot(logis.pred.tr, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(logis.pred.te, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Logistic Regression", outer = TRUE, cex = 1.5)
-auc.lin.te <- colAUC(attributes(svm.pred.lin.te)$decision.values, test$Purchase)
-auc.poly.te <- colAUC(attributes(svm.pred.poly.te)$decision.values, test$Purchase)
-auc.rbf.te <- colAUC(attributes(svm.pred.rbf.te)$decision.values, test$Purchase)
-auc.sigm.te <- colAUC(attributes(svm.pred.sigm.te)$decision.values, test$Purchase)
-auc.logis.te <- colAUC(logis.pred.te, test$Purchase)
-auc.lin.tr <- colAUC(attributes(svm.pred.lin.tr)$decision.values, train$Purchase)
-auc.poly.tr <- colAUC(attributes(svm.pred.poly.tr)$decision.values, train$Purchase)
-auc.rbf.tr <- colAUC(attributes(svm.pred.rbf.tr)$decision.values, train$Purchase)
-auc.sigm.tr <- colAUC(attributes(svm.pred.sigm.tr)$decision.values, train$Purchase)
-auc.logis.tr <- colAUC(logis.pred.tr, train$Purchase)
-aucs <- matrix(c(auc.lin.tr, auc.poly.tr, auc.rbf.tr, auc.sigm.tr, auc.logis.tr, 
-                 auc.lin.te, auc.poly.te, auc.rbf.te, auc.sigm.te, auc.logis.te), 
-               ncol = 2, 
-               dimnames = list(c("Linear SVM", 
-                                 "Polynomial SVM", 
-                                 "Radial Basis SVM", 
-                                 "NN SVM", 
-                                 "Logistic Regression"), 
-                               c("Training", "Test")
-               )
+
+
+
+
+set.seed(1)
+ssts <- read.table("./SST011970_032003.dat.txt")
+locs <- read.table("./SSTlonlat.dat.txt")
+landmasks <- read.table("./SSTlandmask.dat.txt")
+indexes <- read.table("./Nino34index.dat")
+cnames <- expand.grid(month.abb, 1970:2002)
+cnames <- mdply(cnames, 'paste', sep = "")
+cnames <- c(cnames[, 3], "Jan2003", "Feb2003", "Mar2003")
+colnames(ssts) <- cnames
+names(locs) <- c("lon", "lat")
+names(landmasks) <- "land"
+rownames(indexes) <- cnames
+keep <- (landmasks == 0)
+temps <- data.frame(ave = apply(ssts, 1, mean), 
+                    sd = apply(ssts, 1, sd))
+p1 <- ggplot(data = locs[keep, ], 
+             aes(x = lon, y = lat, color = temps$ave[keep]))
+p1 <- p1 + geom_point() + 
+        scale_colour_gradient(name = "Mean Temp.", 
+                              low = "darkblue", 
+                              high = "yellow") +
+        ylab("Latitude") +
+        xlab("Longitude") + 
+        ggtitle("Mean SST from Different Location") +
+        theme(plot.title = element_text(lineheight=1, 
+                                        face="bold", 
+                                        size = 12))
+p2 <- ggplot(data = locs[keep, ], 
+             aes(x = lon, y = lat, color = temps$sd[keep]))
+p2 <- p2 + 
+        geom_point() + 
+        scale_colour_gradient(name = "Std. Dev.", 
+                              low = "darkblue", 
+                              high = "yellow") +
+        ylab("Latitude") +
+        xlab("Longitude") + 
+        ggtitle("Standard Deviation of SST from Different Locations") +
+        theme(plot.title = element_text(lineheight=1, 
+                                        face="bold", 
+                                        size = 12))
+multiplot(p1, p2, cols=1)
+
+
+pr.input <- t(ssts[keep, ])
+pr.out.nonsd <- prcomp(pr.input)
+pr.out.sd <- prcomp(pr.input, scale. = TRUE)
+pr.out.nonsd.var <- pr.out.nonsd$sdev^2
+pr.out.sd.var <- pr.out.sd$sdev^2
+loadingmap1 <- ggplot(data = locs[keep, ], 
+                      aes(x = lon, y = lat, color = pr.out.nonsd$rotation[, 1]))
+loadingmap1 <- loadingmap1 + 
+        geom_point() + 
+        scale_colour_gradient(name = "Loading", 
+                              low = "darkblue", 
+                              high = "yellow") +
+        ylab("Latitude") +
+        xlab("Longitude") + 
+        ggtitle("First Component Loading Maps") +
+        theme(plot.title = element_text(lineheight=1, face="bold"))
+loadingmap2 <- ggplot(data = locs[keep, ], 
+                      aes(x = lon, y = lat, color = pr.out.nonsd$rotation[, 2]))
+loadingmap2 <- loadingmap2 + 
+        geom_point() + 
+        scale_colour_gradient(name = "Loading", 
+                              low = "darkblue", 
+                              high = "yellow") +
+        ylab("Latitude") +
+        xlab("Longitude") + 
+        ggtitle("Second Component Loading Maps") +
+        theme(plot.title = element_text(lineheight=1, face="bold"))
+pc1series <- ggplot(data.frame(pc1 = pr.out.nonsd$x[, 1]), aes(x = 1:399, y = pc1))
+pc1series <- pc1series + geom_line() +
+        xlab("Month") +
+        ylab("PC1 Scores") +
+        ggtitle("First Component Time Series") +
+        theme(plot.title = element_text(lineheight=1, face="bold"))
+pc2series <- ggplot(data.frame(pc2 = pr.out.nonsd$x[, 2]), aes(x = 1:399, y = pc2))
+pc2series <- pc2series + geom_line() + 
+        xlab("Month") +
+        ylab("PC2 Scores") +
+        ggtitle("Second Component Time Series") +
+        theme(plot.title = element_text(lineheight=1, face="bold"))
+multiplot(loadingmap1, pc1series, loadingmap2, pc2series, cols=2)
+
+
+
+set.seed(3)
+Z <- pr.out.nonsd$x[, 1:4]
+km.out=kmeans(Z , 3, nstart=20)
+km.plot <- ggplot(data = data.frame(Z, class = factor(km.out$cluster)), 
+                  aes(x = PC1, y = PC2, colour = class))
+km.plot <- km.plot + geom_point()
+cl.plot <- ggplot(data = data.frame(Z, class = factor(indexes[, 1])), 
+                  aes(x = PC1, y = PC2, colour = class))
+cl.plot <- cl.plot + geom_point()
+multiplot(km.plot, cl.plot, cols=1)
+confusionMatrix(km.out$cluster, indexes[, 1]+2)
+
+
+hc.average <- hclust(dist(Z), method="average")
+hc.complete <- hclust(dist(Z), method="complete")
+hc.average.cluster <- c(2, 1, 3)[cutree(hc.average, 3)]
+hc.complete.cluster <- c(2, 1, 3)[cutree(hc.complete, 3)]
+confusionMatrix(hc.average.cluster, indexes[, 1]+2)
+confusionMatrix(hc.complete.cluster, indexes[, 1]+2)
+
+sigma.grid <- c(0.01, 0.005, 0.001, 0.00001)
+kpca.out <- c()
+kpca.p <- list()
+for (i in 1:length(sigma.grid)){
+        kpca.out <- c(kpca.out, kpca( ~ ., data = data.frame(pr.input), 
+                                      kpar = list(sigma = sigma.grid[i])))
+        kpca.p[[i]] <- ggplot(data = data.frame(kpca.out[[i]]@rotated[, 1:2], 
+                                                class = factor(indexes[, 1])), 
+                              aes(x = X1, y = X2, colour = class)) + 
+                geom_point() + 
+                ggtitle(i)
+}
+multiplot(plotlist = kpca.p, cols = 2)
+ggplot(data = (temp = data.frame(t(ssts[sample(1:nrow(ssts), 2), ]),class = factor(indexes[, 1]))), aes(x = temp[, 1], y = temp[,2], colour = class))+geom_point()+xlab(names(temp)[1])+ylab(names(temp)[2])
+
+
+four_result <- data.frame(matrix(NA, ncol = 4, nrow = 0))
+names(four_result) <- c("time", "kernel_width", "PC", "Scores")
+for (i in 1:length(sigma.grid)){
+        if (exists("d")){
+                rm(d)
+        }
+        if (exists("temp")){
+                rm(temp)
+        }
+        d = data.frame(time = 1:nrow(kpca.out[[i]]@rotated[, 1:2]),
+                       kernel_width = rep(sigma.grid[i], nrow(kpca.out[[i]]@rotated[, 1:2])),
+                       kpca.out[[i]]@rotated[, 1:2])
+        temp <- reshape(data = d, 
+                        direction = "long", 
+                        varying = list(names(d)[3:4]), 
+                        v.names = "Scores",
+                        idvar = c("time", "kernel_width"),
+                        timevar = "PC", 
+                        times = c("PC1", "PC2"))
+        rownames(temp) <- NULL
+        four_result <- rbind(four_result, temp)
+}
+
+multi.time.plot <- ggplot(data = four_result, 
+                          aes(x = time, y = Scores)) +
+        geom_line() +
+        facet_grid(kernel_width ~ PC)
+
+
+k = c(5, 10, 20, 40)
+isomap.out <- list()
+LLE.out <- list()
+for (i in 1:length(k)){
+        isomap.out[[i]] <- Isomap(data = pr.input, k = k[i])
+        LLE.out[[i]] <- Isomap(data = pr.input, k = k[i])
+}
+isomap.out <- lapply(isomap.out, 
+                     data.frame, 
+                     class = factor(indexes[, 1]))
+LLE.out <- lapply(LLE.out, 
+                  data.frame, 
+                  class = factor(indexes[, 1]))
+isomap.p <- list()
+for (i in 1:length(k)){
+        isomap.p[[i]] <- ggplot(data = isomap.out[[i]], 
+                                aes(x = dim2.1, y = dim2.2, colour = class)) + 
+                geom_point()
+}
+multiplot(plotlist = isomap.p, cols = 2)
+LLE.p <- list()
+for (i in 1:length(k)){
+        LLE.p[[i]] <- ggplot(data = LLE.out[[i]], 
+                             aes(x = dim2.1, y = dim2.2, colour = class)) + 
+                geom_point()
+}
+multiplot(plotlist = LLE.p, cols = 2)
+iso.lle.time.series <- rbind(cbind(time = 1:nrow(isomap.out[[4]]), 
+                                   method = rep("Isomap", 
+                                                nrow(isomap.out[[4]])), 
+                                   isomap.out[[4]][, -3]), 
+                             cbind(time = 1:nrow(LLE.out[[4]]), 
+                                   method = rep("LLE", 
+                                                nrow(LLE.out[[4]])), 
+                                   LLE.out[[4]][, -3])
 )
+iso.lle.time.series <- reshape(data = iso.lle.time.series, 
+                               direction = "long", 
+                               varying = list(names(iso.lle.time.series)[3:4]), 
+                               v.names = "Scores", 
+                               idvar = c("time", "method"),
+                               timevar = "Dim", 
+                               times = c("First Dim", "Second Dim")
+)
+rownames(iso.lle.time.series) <- NULL
+iso.lle.time.plot <- ggplot(data = iso.lle.time.series, 
+                            aes(x = time, y = Scores)) +
+        geom_line() + 
+        facet_grid(method ~ Dim)
 
-
-# 7
-train.input <- model.matrix(Purchase ~ ., data = train)
-test.input <- model.matrix(Purchase ~ ., data = test)
-penal.grid <- expand.grid(l1 = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10), 
-                          l2 = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10))
-cvml <- numeric(length(penal.grid))
-for (i in 1:nrow(penal.grid)){
-        cvml[i] <- cvl(response = train$Purchase, 
-                       penalized = train.input,
-                       lambda1 = penal.grid[i, 1],
-                       lambda2 = penal.grid[i, 2],
-                       model = "logistic", 
-                       trace = FALSE, 
-                       fold = 10)$cvl
-}
-ind <- which.max(cvml)
-penlogis.fit <- penalized(response = train$Purchase, 
-                          penalized = train.input, 
-                          model = "logistic", 
-                          lambda1 = penal.grid[ind, 1], 
-                          lambda2 = penal.grid[ind, 1])
-penlogis.pred.tr <- predict(penlogis.fit, 
-                            penalized = train.input)
-cm.penlogis.tr <- confusionMatrix(as.factor(ifelse(penlogis.pred.tr >= 0.5, 
-                                                   "MM", 
-                                                   "CH")),
-                                  train$Purchase)
-penlogis.pred.te <- predict(penlogis.fit, 
-                            penalized = test.input)
-cm.penlogis.te <- confusionMatrix(as.factor(ifelse(penlogis.pred.te >= 0.5, 
-                                                   "MM", 
-                                                   "CH")),
-                                  test$Purchase)
-rocplot(penlogis.pred.tr, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(penlogis.pred.te, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Penalized Logistic Regression", outer = TRUE, cex = 1.5)
-auc.penlogis.tr <- colAUC(penlogis.pred.tr, train$Purchase)
-auc.penlogis.te <- colAUC(penlogis.pred.te, test$Purchase)
-
-
-# glmnet
-a <- seq(0, 1, 0.01)
-l <- seq(0, 1, 0.01)
-cverr <- numeric(length(a))
-lambda <- numeric(length(a))
-train.input <- model.matrix(Purchase ~ ., data = train)
-test.input <- model.matrix(Purchase ~ ., data = test)
-for (i in 1:length(a)){
-        cvglm <- cv.glmnet(train.input, 
-                           train$Purchase, 
-                           family = "binomial", 
-                           type.measure = "class", 
-                           lambda = l, 
-                           alpha = a[i], 
-                           parallel = TRUE)
-        lambda[i] <- cvglm$lambda.min
-        cverr[i] <- min(cvglm$cvm)
-}
-lambda <- lambda[which.min(cverr)]
-a <- a[which.min(cverr)]
-glmnet.fit <- glmnet(train.input, 
-                     train$Purchase, 
-                     family = "binomial", 
-                     lambda = lambda, 
-                     alpha = a)
-glmnet.pred.tr <- predict(glmnet.fit, 
-                          train.input,
-                          type = "response")
-cm.glmnet.tr <- confusionMatrix(as.factor(ifelse(penlogis.pred.tr >= 0.5, 
-                                                   "MM", 
-                                                   "CH")),
-                                  train$Purchase)
-glmnet.pred.te <- predict(glmnet.fit, 
-                          test.input,
-                          type = "response")
-cm.glmnet.te <- confusionMatrix(as.factor(ifelse(penlogis.pred.te >= 0.5, 
-                                                 "MM", 
-                                                 "CH")),
-                                test$Purchase)
-rocplot(glmnet.pred.tr, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(glmnet.pred.te, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Penalized Logistic Regression", outer = TRUE, cex = 1.5)
-auc.glmnet.tr <- colAUC(glmnet.pred.tr, train$Purchase)
-auc.glmnet.te <- colAUC(glmnet.pred.te, test$Purchase)
+pp.1 <- isomap.p[[4]]
+pp.2 <- LLE.p[[4]]
+pp.3 <- kpca.p[[3]]
+pp.4 <- ggplot(data = data.frame(pr.out.nonsd$x[, 1:2], 
+                                 class = factor(indexes[, 1])), 
+               aes(x = PC1, y = PC2, colour = class)) + 
+        geom_point()
+multiplot(pp.1, pp.3, pp.2, pp.4, cols = 2)
 ```
-
-$\blacktriangleright$ \textbf{Exercises 1.\quad Solution.} 
-
-The optimal cost is
-```{r}
-tune.svm.lin$best.parameters$cost
-```
-The training error rate is `r round(1 - cm.lin.tr$overall[1], 4) * 100`\%, and the test error rate is `r round(1 - cm.lin.te$overall[1], 4) * 100`\%.
-
-$\blacktriangleright$ \textbf{Exercises 2.\quad Solution.} 
-
-The optimal cost is
-```{r}
-tune.svm.poly$best.parameters$cost
-```
-The training error rate is `r round(1 - cm.poly.tr$overall[1], 4) * 100`\%, and the test error rate is `r round(1 - cm.poly.te$overall[1], 4) * 100`\%.
-
-$\blacktriangleright$ \textbf{Exercises 3.\quad Solution.} 
-
-The optimal cost and gamma are
-```{r}
-unlist(tune.svm.rbf$best.parameters)[2:3]
-```
-The training error rate is `r round(1 - cm.rbf.tr$overall[1], 4) * 100`\%, and the test error rate is `r round(1 - cm.rbf.te$overall[1], 4) * 100`\%.
-
-$\blacktriangleright$ \textbf{Exercises 4.\quad Solution.}
-
-The optimal cost and gamma are
-```{r}
-unlist(tune.svm.sigm$best.parameters)[2:3]
-```
-The training error rate is `r round(1 - cm.sigm.tr$overall[1], 4) * 100`\%, and the test error rate is `r round(1 - cm.sigm.te$overall[1], 4) * 100`\%.
-
-$\blacktriangleright$ \textbf{Exercises 5.\quad Solution.}
-
-The training error rate is `r round(1 - cm.logis.tr$overall[1], 4) * 100`\%, and the test error rate is `r round(1 - cm.logis.te$overall[1], 4) * 100`\%.
-
-$\blacktriangleright$ \textbf{Exercises 6.\quad Solution.} 
-```{r, fig.align='center', fig.height=4, echo=FALSE}
-par(mfrow = c(1, 2), 
-    oma = c(0, 0, 2, 0))
-library(ROCR)
-rocplot(attributes(svm.pred.lin.tr)$decision.values, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(attributes(svm.pred.lin.te)$decision.values, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Linear SVM", outer = TRUE, cex = 1.5)
-rocplot(attributes(svm.pred.poly.tr)$decision.values, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(attributes(svm.pred.poly.te)$decision.values, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Polynomial SVM", outer = TRUE, cex = 1.5)
-rocplot(attributes(svm.pred.rbf.tr)$decision.values, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(attributes(svm.pred.rbf.te)$decision.values, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Radial Basis SVM", outer = TRUE, cex = 1.5)
-rocplot(attributes(svm.pred.sigm.tr)$decision.values, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(attributes(svm.pred.sigm.te)$decision.values, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for NN SVM", outer = TRUE, cex = 1.5)
-rocplot(logis.pred.tr, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(logis.pred.te, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Logistic Regression", outer = TRUE, cex = 1.5)
-```
-
-In terms of AUC, 
-```{r}
-aucs
-```
-`r rownames(aucs)[which.max(aucs[, 1])]` performs best on training dataset, and `r rownames(aucs)[which.max(aucs[, 2])]` performs best on test dataset.
-
-$\blacktriangleright$ \textbf{Exercises 7.\quad Solution.} 
 ```{r, include=FALSE}
-library(caTools) 
-penlogis.auc.tr <- colAUC(penlogis.pred.tr, train$Purchase)
-penlogis.auc.te <- colAUC(penlogis.pred.te, test$Purchase)
-glmnet.auc.tr <- colAUC(glmnet.pred.tr, train$Purchase)
-glmnet.auc.te <- colAUC(glmnet.pred.te, test$Purchase)
-```
-Using `penalized` package, the penalty parameter search space is
-```{r, eval=FALSE}
-penal.grid <- expand.grid(l1 = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10), 
-                          l2 = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10))
-```
-The optimal penalty paramters are
-```{r}
-penlogis.fit@lambda1
-penlogis.fit@lambda2
-```
-The training error rate is `r round(1 - cm.penlogis.tr$overall[1], 4) * 100`\%, and the test error rate is `r round(1 - cm.penlogis.te$overall[1], 4) * 100`\%. The training AUC is `r round(penlogis.auc.tr, 4)` and the test AUC is `r round(penlogis.auc.te, 4)`. So based on only this dataset, the penalized logistic regression is better than linear SVM and neural net SVM, but worse than the other three models, in terms of AUC. Gernally speaking, it can work as well as the other models. The ROC plot is
-```{r, fig.align='center', fig.height=4, echo=FALSE}
-par(mfrow = c(1, 2), 
-    oma = c(0, 0, 2, 0))
-rocplot(penlogis.pred.tr, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(penlogis.pred.te, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Penalized Logistic Regression", outer = TRUE, cex = 1.5)
+library(plyr)
+library(maps)
+library(mapdata)
+library(maptools)  
+library(scales)
+library(ggplot2)
+library(mapproj)
+library(ggmap)
+library(ggbiplot)
+library(ggfortify)
+library(caret)
+library(kernlab)
+library(RDRToolbox)
+set.seed(1)
 ```
 
-I also try this kind of regression using `glmnet` package, the penalty parameter search space is
-```{r, eval=FALSE}
-alpha <- seq(0, 1, 0.01)
-lambda <- seq(0, 1, 0.01)
-```
-The optimal penalty paramters are
-```{r}
-lambda
-a
-```
-The training error rate is `r round(1 - cm.glmnet.tr$overall[1], 4) * 100`\%, and the test error rate is `r round(1 - cm.glmnet.te$overall[1], 4) * 100`\%. The training AUC is `r round(glmnet.auc.tr, 4)` and the test AUC is `r round(glmnet.auc.te, 4)`. The ROC plot is
-```{r, fig.align='center', fig.height=4, echo=FALSE}
-par(mfrow = c(1, 2), 
-    oma = c(0, 0, 2, 0))
-rocplot(glmnet.pred.tr, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(glmnet.pred.te, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Penalized Logistic Regression", outer = TRUE, cex = 1.5)
-``` 
+$\blacktriangleright$ \textbf{1.\quad Solution.}
 
-The main code is
-```{r, eval = FALSE}
-train.input <- model.matrix(Purchase ~ ., data = train)
-test.input <- model.matrix(Purchase ~ ., data = test)
-penal.grid <- expand.grid(l1 = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10), 
-                          l2 = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10))
-cvml <- numeric(length(penal.grid))
-for (i in 1:nrow(penal.grid)){
-        cvml[i] <- cvl(response = train$Purchase, 
-                       penalized = train.input,
-                       lambda1 = penal.grid[i, 1],
-                       lambda2 = penal.grid[i, 2],
-                       model = "logistic", 
-                       trace = FALSE, 
-                       fold = 10)$cvl
-}
-ind <- which.max(cvml)
-penlogis.fit <- penalized(response = train$Purchase, 
-                          penalized = train.input, 
-                          model = "logistic", 
-                          lambda1 = penal.grid[ind, 1], 
-                          lambda2 = penal.grid[ind, 1])
-penlogis.pred.tr <- predict(penlogis.fit, 
-                            penalized = train.input)
-cm.penlogis.tr <- confusionMatrix(as.factor(ifelse(penlogis.pred.tr >= 0.5, 
-                                                   "MM", 
-                                                   "CH")),
-                                  train$Purchase)
-penlogis.pred.te <- predict(penlogis.fit, 
-                            penalized = test.input)
-cm.penlogis.te <- confusionMatrix(as.factor(ifelse(penlogis.pred.te >= 0.5, 
-                                                   "MM", 
-                                                   "CH")),
-                                  test$Purchase)
-rocplot(penlogis.pred.tr, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(penlogis.pred.te, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Penalized Logistic Regression", outer = TRUE, cex = 1.5)
-auc.penlogis.tr <- colAUC(penlogis.pred.tr, train$Purchase)
-auc.penlogis.te <- colAUC(penlogis.pred.te, test$Purchase)
-
-
-# glmnet
-a <- seq(0, 1, 0.01)
-l <- seq(0, 1, 0.01)
-cverr <- numeric(length(a))
-lambda <- numeric(length(a))
-train.input <- model.matrix(Purchase ~ ., data = train)
-test.input <- model.matrix(Purchase ~ ., data = test)
-for (i in 1:length(a)){
-        cvglm <- cv.glmnet(train.input, 
-                           train$Purchase, 
-                           family = "binomial", 
-                           type.measure = "class", 
-                           lambda = l, 
-                           alpha = a[i], 
-                           parallel = TRUE)
-        lambda[i] <- cvglm$lambda.min
-        cverr[i] <- min(cvglm$cvm)
-}
-lambda <- lambda[which.min(cverr)]
-a <- a[which.min(cverr)]
-glmnet.fit <- glmnet(train.input, 
-                     train$Purchase, 
-                     family = "binomial", 
-                     lambda = lambda, 
-                     alpha = a)
-glmnet.pred.tr <- predict(glmnet.fit, 
-                          train.input,
-                          type = "response")
-cm.glmnet.tr <- confusionMatrix(as.factor(ifelse(penlogis.pred.tr >= 0.5, 
-                                                   "MM", 
-                                                   "CH")),
-                                  train$Purchase)
-glmnet.pred.te <- predict(glmnet.fit, 
-                          test.input,
-                          type = "response")
-cm.glmnet.te <- confusionMatrix(as.factor(ifelse(penlogis.pred.te >= 0.5, 
-                                                 "MM", 
-                                                 "CH")),
-                                test$Purchase)
-rocplot(glmnet.pred.tr, 
-        train$Purchase, 
-        main="Training Data")
-rocplot(glmnet.pred.te, 
-        test$Purchase, 
-        main="Test Data")
-mtext("ROC for Penalized Logistic Regression", outer = TRUE, cex = 1.5)
-auc.glmnet.tr <- colAUC(glmnet.pred.tr, train$Purchase)
-auc.glmnet.te <- colAUC(glmnet.pred.te, test$Purchase)
-```
-
-
-
-
-
-
-
+From the two plots, the mean temperatures of the area does not show so much differerces. The only abnormal phenomenon is that the the loacations which have relatively low temperature are around the equator and eastern Pacific Ocean, where people usually think the weather might be hot. Moreover, these locations also have very high variation, while the temperatures of other locations of Pacific Ocean are much more stable.
 
 ```{r, echo=FALSE}
-par(op)
+multiplot(p1, p2, cols=1)
 ```
+
+
+$\blacktriangleright$ \textbf{2.\quad Solution.}
+
+The variance accounted for by the first 4 principal components when the data are not standardized and when they are standardized are
+```{r}
+pr.out.nonsd.var[1:4]
+pr.out.sd.var[1:4]
+```
+
+And the percentages of them are
+```{r}
+pr.out.nonsd.var[1:4]/sum(pr.out.nonsd.var)
+pr.out.sd.var[1:4]/sum(pr.out.sd.var)
+```
+
+
+
+Both map plots show that the locations around the equator and eastern Pacific Ocean have high loading, which means that they play very important roles in the first principle component and the second principle component. This is in accordance with the result in question 1. And from the time series plots, there are several unusual low temperatures in the trend of PC1 and several unusual high temperatures in the trend of PC2. To sum up, based on PCA, the first two key features which enfluence the "Tropical Pacific Sea Surface Temperature (SST)", are the unusual low temperatures and usual high temperatures of the area between 180 W ~ 90 W, 5 S ~ 5 N(about Nino Region 3), which may be the well-known La Ni$\tilde{\text{n}}$a and El Ni$\tilde{\text{n}}$o.
+
+
+
+```{r, echo=FALSE, cache=TRUE}
+loadingmap1 <- ggplot(data = locs[keep, ], 
+                      aes(x = lon, y = lat, color = -pr.out.nonsd$rotation[, 1]))
+loadingmap1 <- loadingmap1 + 
+        geom_point() + 
+        scale_colour_gradient(name = "Loading", 
+                              low = "darkblue", 
+                              high = "yellow") +
+        ylab("Latitude") +
+        xlab("Longitude") + 
+        ggtitle("First Component Loading Maps") +
+        theme(plot.title = element_text(lineheight = 1, 
+                                        face = "bold", 
+                                        size = 12))
+loadingmap2 <- ggplot(data = locs[keep, ], 
+                      aes(x = lon, y = lat, color = pr.out.nonsd$rotation[, 2]))
+loadingmap2 <- loadingmap2 + 
+        geom_point() + 
+        scale_colour_gradient(name = "Loading", 
+                              low = "darkblue", 
+                              high = "yellow") +
+        ylab("Latitude") +
+        xlab("Longitude") + 
+        ggtitle("Second Component Loading Maps") +
+        theme(plot.title = element_text(lineheight=1, 
+                                        face="bold", 
+                                        size = 12))
+pc1series <- ggplot(data.frame(pc1 = pr.out.nonsd$x[, 1]), aes(x = 1:399, y = pc1))
+pc1series <- pc1series + geom_line() +
+        xlab("Month") +
+        ylab("PC1 Scores") +
+        ggtitle("First Component Time Series") +
+        theme(plot.title = element_text(lineheight=1, 
+                                        face="bold", 
+                                        size = 12))
+pc2series <- ggplot(data.frame(pc2 = pr.out.nonsd$x[, 2]), aes(x = 1:399, y = pc2))
+pc2series <- pc2series + geom_line() + 
+        xlab("Month") +
+        ylab("PC2 Scores") +
+        ggtitle("Second Component Time Series") +
+        theme(plot.title = element_text(lineheight=1, 
+                                        face="bold", 
+                                        size = 12))
+multiplot(loadingmap1, pc1series, loadingmap2, pc2series, cols=2)
+```
+
+$\blacktriangleright$ \textbf{3.\quad Solution.}
+
+To be clear, I use the No.3 random seed. The reason of my choice is the classification results of K-means cluster can be the same order with the Nion 3.4 Index, which means class 1 v.s La Ni$\tilde{\text{n}}$a, class 2 v.s Normal, and class 3 v.s El Ni$\tilde{\text{n}}$o. 
+
+```{r, cache=TRUE, echo=FALSE, fig.height=4}
+ts.plot <- ggplot(data = data.frame(Month = 1:399, 
+                                    class = km.out$cluster), 
+                  aes(x = Month, y = class))
+ts.plot <- ts.plot + geom_line() + 
+        ggtitle("Class Time Series") +
+        theme(plot.title = element_text(lineheight = 1, 
+                                        face = "bold", 
+                                        size = 12))
+km.plot <- ggplot(data = data.frame(Z, class = factor(km.out$cluster)), 
+                  aes(x = PC1, y = PC2, colour = class))
+km.plot <- km.plot + geom_point() + 
+        ggtitle("K-means Cluster Classification") +
+        theme(plot.title = element_text(lineheight = 1, 
+                                        face = "bold", 
+                                        size = 12))
+cl.plot <- ggplot(data = data.frame(Z, class = factor(indexes[, 1])), 
+                  aes(x = PC1, y = PC2, colour = class))
+cl.plot <- cl.plot + geom_point() +
+        ggtitle("True Classification") +
+        theme(plot.title = element_text(lineheight = 1, 
+                                        face = "bold", 
+                                        size = 12))
+multiplot(ts.plot, km.plot, cl.plot, 
+          layout = matrix(c(1,1,2,3), nrow=2, byrow=TRUE))
+```
+
+
+From the classification plots, we can see that most data are correctly classified, so the K-means cluster based on PCA is fairly good. To see the performance more precisely, we can create the confusion matrix.
+
+```{r}
+confusionMatrix(km.out$cluster-2, indexes[, 1])$table
+confusionMatrix(km.out$cluster-2, indexes[, 1])$overall["Accuracy"]
+```
+
+
+$\blacktriangleright$ \textbf{4.\quad Solution.}
+
+For the average linkage methods
+```{r}
+confusionMatrix(hc.average.cluster-2, indexes[, 1])$table
+confusionMatrix(hc.average.cluster-2, indexes[, 1])$overall["Accuracy"]
+```
+For the complete linkage methods
+```{r}
+confusionMatrix(hc.complete.cluster-2, indexes[, 1])$table
+confusionMatrix(hc.complete.cluster-2, indexes[, 1])$overall["Accuracy"]
+```
+
+
+Both methods are worse than the K-means cluster, but the the complete linkage method is a little better than the other, not because the accuracy, but the high sensitivity, which make it possible to detect the anomalies more precisely.
+
+$\blacktriangleright$ \textbf{5.\quad Solution.}
+
+
+
+```{r, cache=TRUE, echo=FALSE}
+multi.time.plot + ggtitle("Time Series Plots of PC1 and PC2 with Different Width") +
+        theme(plot.title = element_text(lineheight = 1, 
+                                        face = "bold", 
+                                        size = 10))
+```
+
+```{r, cache=FALSE, echo=FALSE}
+kpca.out <- c()
+kpca.p <- list()
+for (i in 1:length(sigma.grid)){
+        kpca.out <- c(kpca.out, kpca( ~ ., data = data.frame(pr.input), 
+                                      kpar = list(sigma = sigma.grid[i])))
+        kpca.p[[i]] <- ggplot(data = data.frame(kpca.out[[i]]@rotated[, 1:2], 
+                                                class = factor(indexes[, 1])), 
+                              aes(x = X1, y = X2, colour = class)) + 
+                geom_point() + 
+                xlab("PC1") + 
+                ylab("PC2") +
+                ggtitle(paste("Radial Basis kernel with sigma=", 
+                              sigma.grid[i], sep = "")) +
+                theme(plot.title = element_text(lineheight = 1, 
+                                                face = "bold", 
+                                                size = 10))
+}
+multiplot(plotlist = kpca.p, cols = 2)
+```
+
+```{r, eval=FALSE}
+library(kernlab)
+library(ggplot2)
+sigma.grid <- c(0.01, 0.005, 0.001, 0.00001)
+kpca.out <- c()
+kpca.p <- list()
+for (i in 1:length(sigma.grid)){
+        kpca.out <- c(kpca.out, kpca( ~ ., data = data.frame(pr.input), 
+                                      kpar = list(sigma = sigma.grid[i])))
+        kpca.p[[i]] <- ggplot(data = data.frame(kpca.out[[i]]@rotated[, 1:2], 
+                                                class = factor(indexes[, 1])), 
+                              aes(x = X1, y = X2, colour = class)) + 
+                geom_point() + 
+                xlab("PC1") + 
+                ylab("PC2") +
+                ggtitle(paste("Radial Basis kernel with sigma=", 
+                              sigma.grid[i], sep = "")) +
+                theme(plot.title = element_text(lineheight = 1, 
+                                                face = "bold", 
+                                                size = 10))
+}
+multiplot(plotlist = kpca.p, cols = 2)
+four_result <- data.frame(matrix(NA, ncol = 4, nrow = 0))
+names(four_result) <- c("time", "kernel_width", "PC", "Scores")
+for (i in 1:length(sigma.grid)){
+        if (exists("d")){
+                rm(d)
+        }
+        if (exists("temp")){
+                rm(temp)
+        }
+        d = data.frame(time = 1:nrow(kpca.out[[i]]@rotated[, 1:2]),
+                       kernel_width = rep(sigma.grid[i], nrow(kpca.out[[i]]@rotated[, 1:2])),
+                       kpca.out[[i]]@rotated[, 1:2])
+        temp <- reshape(data = d, 
+                        direction = "long", 
+                        varying = list(names(d)[3:4]), 
+                        v.names = "Scores",
+                        idvar = c("time", "kernel_width"),
+                        timevar = "PC", 
+                        times = c("PC1", "PC2"))
+        rownames(temp) <- NULL
+        four_result <- rbind(four_result, temp)
+}
+
+multi.time.plot <- ggplot(data = four_result, 
+                          aes(x = time, y = Scores)) +
+        geom_line() +
+        facet_grid(kernel_width ~ PC)
+```
+
+
+
+$\blacktriangleright$ \textbf{6.\quad Solution.}
+
+```{r, cache=TRUE, echo=FALSE}
+iso.lle.time.plot + ggtitle("Time Series Plots of ISOMAP and LLE Using 40  Neighbors")
+```
+
+
+```{r, cache=TRUE, echo=FALSE}
+pp.1 <- isomap.p[[4]] + ggtitle("Isomap with 40 Neighbors") +
+        theme(plot.title = element_text(lineheight = 1, 
+                                        face = "bold", 
+                                        size = 12)) +
+        xlab("Dim 1") +
+        ylab("Dim 2")
+pp.2 <- LLE.p[[4]] + ggtitle("LLE with 40 Neighbors") +
+        theme(plot.title = element_text(lineheight = 1, 
+                                        face = "bold", 
+                                        size = 10))
+pp.3 <- kpca.p[[3]] + ggtitle(paste("Kernel PCA with Width=",
+                                    sigma.grid[3], 
+                                    sep = "")) +
+        theme(plot.title = element_text(lineheight = 1, 
+                                        face = "bold", 
+                                        size = 10)) +
+        xlab("Dim 1") +
+        ylab("Dim 2")
+pp.4 <- ggplot(data = data.frame(pr.out.nonsd$x[, 1:2], 
+                                 class = factor(indexes[, 1])), 
+               aes(x = PC1, y = PC2, colour = class)) + 
+        geom_point() + 
+        ggtitle("PCA") +
+        theme(plot.title = element_text(lineheight = 1, 
+                                        face = "bold", 
+                                        size = 10))
+multiplot(pp.1, pp.3, pp.2, pp.4, cols = 2)
+```
+
+
+
+
+```{r, eval=FALSE}
+library(RDRToolbox)
+k = c(5, 10, 20, 40)
+isomap.out <- list()
+LLE.out <- list()
+for (i in 1:length(k)){
+        isomap.out[[i]] <- Isomap(data = pr.input, k = k[i])
+        LLE.out[[i]] <- Isomap(data = pr.input, k = k[i])
+}
+isomap.out <- lapply(isomap.out, 
+                     data.frame, 
+                     class = factor(indexes[, 1]))
+LLE.out <- lapply(LLE.out, 
+                  data.frame, 
+                  class = factor(indexes[, 1]))
+isomap.p <- list()
+for (i in 1:length(k)){
+        isomap.p[[i]] <- ggplot(data = isomap.out[[i]], 
+                                aes(x = dim2.1, y = dim2.2, colour = class)) + 
+                geom_point()
+}
+multiplot(plotlist = isomap.p, cols = 2)
+LLE.p <- list()
+for (i in 1:length(k)){
+        LLE.p[[i]] <- ggplot(data = LLE.out[[i]], 
+                             aes(x = dim2.1, y = dim2.2, colour = class)) + 
+                geom_point()
+}
+multiplot(plotlist = LLE.p, cols = 2)
+iso.lle.time.series <- rbind(cbind(time = 1:nrow(isomap.out[[4]]), 
+                                   method = rep("Isomap", 
+                                                nrow(isomap.out[[4]])), 
+                                   isomap.out[[4]][, -3]), 
+                             cbind(time = 1:nrow(LLE.out[[4]]), 
+                                   method = rep("LLE", 
+                                                nrow(LLE.out[[4]])), 
+                                   LLE.out[[4]][, -3])
+)
+iso.lle.time.series <- reshape(data = iso.lle.time.series, 
+                               direction = "long", 
+                               varying = list(names(iso.lle.time.series)[3:4]), 
+                               v.names = "Scores", 
+                               idvar = c("time", "method"),
+                               timevar = "Dim", 
+                               times = c("First Dim", "Second Dim")
+)
+rownames(iso.lle.time.series) <- NULL
+iso.lle.time.plot <- ggplot(data = iso.lle.time.series, 
+                            aes(x = time, y = Scores)) +
+        geom_line() + 
+        facet_grid(method ~ Dim)
+
+pp.1 <- isomap.p[[4]]
+pp.2 <- LLE.p[[4]]
+pp.3 <- kpca.p[[3]]
+pp.4 <- ggplot(data = data.frame(pr.out.nonsd$x[, 1:2], 
+                                 class = factor(indexes[, 1])), 
+               aes(x = PC1, y = PC2, colour = class)) + 
+        geom_point()
+multiplot(pp.1, pp.3, pp.2, pp.4, cols = 2)
+```
+
+
+
+
+
 
 
 
